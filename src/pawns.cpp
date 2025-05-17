@@ -9,8 +9,6 @@
 #include "pieces.h"
 #include "sides.h"
 
-// #define DEBUG
-
 // bitmask to get important ranks/files
 ull firstFileBitmask  = 0x8080808080808080ULL;
 ull middleFilesBitmask = 0x7E7E7E7E7E7E7E7EULL;
@@ -181,10 +179,6 @@ std::optional<std::pair<std::unique_ptr<Move>, std::unique_ptr<Move>>> Pawn::get
 // inefficient implementation, will optimize after testing/profiling
 std::vector<std::unique_ptr<Move>> Pawn::generateMoves(Board* board, Side side) {
   std::vector<std::unique_ptr<Move>> compiledMoves;
-
-  #ifdef DEBUG
-  // printBmap(board->readBB((Pieces::piece)(side ? Pieces::P : Pieces::p)));
-  #endif
 
   for (auto&& move_uptr : Pawn::getDiagonalAttacks(board, side))
     compiledMoves.emplace_back(std::move(move_uptr));
