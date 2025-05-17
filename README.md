@@ -20,8 +20,22 @@ cd some/path/to/folder
 git clone "https://github.com/noah-yared/chess-engine.git"
 cd chess-engine
 ```
-To build all the src/include files and run the code in main.cpp execute the command ```make run```.
+To build all the src/include files and run the code in main.cpp ensure that both ```#define DEBUG``` and ```#define TEST``` are commented (at top of ```./src/main.cpp```) as follows and execute the command ```make run```.
+```cpp
+// Uncomment for debugging mode
+// #define DEBUG
 
-To run the tests in ```./tests/tests.cpp``` execute the command ```make tests```.
+// Uncomment for testing
+// #define TEST
+```
+
+To run the tests in ```./tests/tests.cpp``` ensure that ```#define DEBUG```  and ```#define TEST``` are respectively commented and uncommented (at top of ```./src/main.cpp```) as follows and execute the command ```make tests```.
+```cpp
+// Uncomment for debugging mode
+// #define DEBUG
+
+// Uncomment for testing
+#define TEST
+``` 
 
 To remove previously built files before recompiling execute the command ```make clean```. 
