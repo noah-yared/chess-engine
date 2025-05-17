@@ -1,7 +1,9 @@
 #include "kingSafety.h"
 #include "directions.h"
 #include "Move.h"
+#include "utils.h"
 
+#include <cassert>
 
 namespace {
   constexpr int directionIncrements[] = {
@@ -16,44 +18,43 @@ namespace {
   };
 } 
 
-/* TESTED */
+// get bit increment along certain direction
 int getBitIncrement(int dir, bool attacking) {
-  /*
-   * returns the bit increment along attacking/defending
-   * direction for attacking lane dir
-   */
   return (2 * attacking - 1 /* True -> 1, False -> -1 */) * directionIncrements[dir];
 }
 
-bool isPawnAttackingKing(Board* board, int king, Side attackingSide) {
+bool inBounds(int square) {
+  return square < 64 && square >= 0;
+}
+
+bool Attack::isPawnAttackingSquare(Board* board, int king, Side attackingSide) {
   int col = king & 8;
   // bottom right to top left diagonal
   if (((col != 0) && (attackingSide == WHITE)) || ((col != 7) && (attackingSide == BLACK))) {
-    int bitjmp = (attackingSide == WHITE) ? 9 : -9;
-    if (board->readBB(Pieces::type::PAWN, attackingSide) & 1ULL << (king+bitjmp)) {
+    int bitjmp = (attackingSide == WHITE) ? -9 : 9;
+    if (inBounds(king+bitjmp) && (board->readBB(Pieces::type::PAWN, attackingSide) & (1ULL << (king+bitjmp)))) {
       return true;
     }
   }
   // bottom left to top right diagonal
   if (((col != 0) && (attackingSide == BLACK)) || ((col != 7) && (attackingSide == WHITE)) ) {
-    int bitjmp = (attackingSide == WHITE) ? 7 : -7;
-    if (board->readBB(Pieces::type::PAWN, attackingSide) & 1ULL << (king+bitjmp)) {
+    int bitjmp = (attackingSide == WHITE) ? -7 : 7;
+    if (inBounds(king+bitjmp) && (board->readBB(Pieces::type::PAWN, attackingSide) & (1ULL << (king+bitjmp)))) {
       return true;
     }
   }
   return false;
 }
 
-bool isKnightAttackingKing(Board* board, int king, Side attackingSide) {
-  return board->knightAttacks()[king] & board->readBB(Pieces::type::KNIGHT, attackingSide) != 0;  
+bool Attack::isKnightAttackingSquare(Board* board, int king, Side attackingSide) {
+  return (board->knightAttacks()[king] & board->readBB(Pieces::type::KNIGHT, attackingSide)) != 0;  
 }
 
-bool isKingAttackingSquare(Board* board, int square, Side attackingSide) {
-  return board->kingAttacks()[square] & board->readBB(Pieces::type::KING, attackingSide) != 0;
+bool Attack::isKingAttackingSquare(Board* board, int square, Side attackingSide) {
+  return (board->kingAttacks()[square] & board->readBB(Pieces::type::KING, attackingSide)) != 0;
 }
 
-bool isSlidingPieceAttackingKing(Board* board, int king, Side attackingSide) {
-
+bool Attack::isSlidingPieceAttackingSquare(Board* board, int king, Side attackingSide) {
   auto queens = board->readBB(Pieces::type::QUEEN, attackingSide);
   auto rooks = board->readBB(Pieces::type::ROOK, attackingSide);
   auto bishops = board->readBB(Pieces::type::BISHOP, attackingSide);
@@ -63,9 +64,9 @@ bool isSlidingPieceAttackingKing(Board* board, int king, Side attackingSide) {
     auto blockingAllys = board->opposingBB(attackingSide) & board->slidingAttacks()[king][d];
     auto attackingOpps = board->allyBB(attackingSide) & board->slidingAttacks()[king][d];
     int ally_tz = __builtin_ctzll(blockingAllys), opp_tz = __builtin_ctzll(attackingOpps);
-    if (ally_tz < opp_tz) {
+    if (ally_tz > opp_tz) {
       // opp piece can see king unobstructed
-      if ((queens & (1ULL << ally_tz)) || ((Directions::isDiagonal(d) ? bishops : rooks) & (1ULL << ally_tz))) {
+      if ((queens & (1ULL << opp_tz)) || ((Directions::isDiagonal(d) ? bishops : rooks) & (1ULL << opp_tz))) {
         return true;
       }
     }
@@ -87,14 +88,15 @@ bool isSlidingPieceAttackingKing(Board* board, int king, Side attackingSide) {
   return false;
 }
 
-bool doesMovePutKingInCheck(Board* board, Move* move, Side kingSide) {
+bool Attack::doesMovePutKingInCheck(Board* board, Move* move, Side kingSide) {
   auto simulatedBoard = *board;
   simulatedBoard.makeMove(move);
   int king = simulatedBoard.king(kingSide);
+  assert(simulatedBoard.readBB(Pieces::type::KING, kingSide) == 1ULL << king);
   Side attackingSide = kingSide == WHITE ? BLACK : WHITE;
-  return isPawnAttackingKing(&simulatedBoard, king, attackingSide)
-      || isKnightAttackingKing(&simulatedBoard, king, attackingSide)
-      || isSlidingPieceAttackingKing(&simulatedBoard, king, attackingSide)
+  return isPawnAttackingSquare(&simulatedBoard, king, attackingSide)
+      || isKnightAttackingSquare(&simulatedBoard, king, attackingSide)
+      || isSlidingPieceAttackingSquare(&simulatedBoard, king, attackingSide)
       || isKingAttackingSquare(&simulatedBoard, king, attackingSide);
 }
 
@@ -102,7 +104,7 @@ bool Attack::doesMovePutOpponentKingInCheck(Board* board, Move* move, Side side)
   return doesMovePutKingInCheck(board, move, side == WHITE ? BLACK : WHITE);
 }
 
-bool doesMoveExposeAllyKingToCheck(Board* board, Move* move, Side side) {
+bool Attack::doesMoveExposeAllyKingToCheck(Board* board, Move* move, Side side) {
   return doesMovePutKingInCheck(board, move, side);
 }
 

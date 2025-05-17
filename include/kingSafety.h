@@ -8,11 +8,16 @@
 #include "sides.h"
 
 int getBitIncrement(int, bool);
-bool doesMoveExposeAllyKingToCheck(Board* board, Move* move, Side side);
 
 namespace Attack {
-bool doesMovePutOpponentKingInCheck(Board* board, Move* move, Side side);
-bool isSquareUnattacked(Board* board, int square, Side side);
+bool doesMovePutOpponentKingInCheck(Board*, Move*, Side);
+bool doesMoveExposeAllyKingToCheck(Board*, Move*, Side);
+bool doesMovePutKingInCheck(Board*, Move*, Side);
+bool isSquareUnattacked(Board*, int, Side);
+bool isKingAttackingSquare(Board*, int, Side);
+bool isKnightAttackingSquare(Board*, int, Side);
+bool isSlidingPieceAttackingSquare(Board*, int, Side);
+bool isPawnAttackingSquare(Board*, int, Side);
 }
 
 #endif
