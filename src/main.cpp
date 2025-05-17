@@ -6,6 +6,7 @@
 #include "utils.h"
 #include "main.h"
 
+#include <cassert>
 #include <iostream>
 
 // Uncomment for debugging mode
@@ -14,17 +15,24 @@
 // Uncomment for testing
 // #define TEST
 
+static const int SEARCH_DEPTH = 3;
+
+static const auto nullMove = Move(0, 0, static_cast<Pieces::piece>(0));
+
+static bool isMoveNull(Move* move) {
+  return move->i() == nullMove.i() && move->f() == nullMove.f() && move->p() == nullMove.p();
+}
 
 Move pickMove(Board* node, Side side) {
   auto possibleMoves = generateMoves(node, side);
   int bestScore = side == WHITE ? NEGINF : POSINF;
-  Move bestMove = Move(0, 0, static_cast<Pieces::piece>(0));
+  Move bestMove = nullMove;
   for (const auto& move : possibleMoves) {
+    assert(move);
     node->makeMove(move.get());
-    int score = alphaBeta(node, NEGINF, POSINF, 3, false, side == WHITE ? BLACK : WHITE);
-    if (side == WHITE && score > bestScore || side == BLACK && score < bestScore) {
+    int score = alphaBeta(node, NEGINF, POSINF, SEARCH_DEPTH, false, side == WHITE ? BLACK : WHITE);
+    if ((side == WHITE && score > bestScore) || (side == BLACK && score < bestScore)) {
       bestScore = score;
-      if (!move) {std::cerr << "Move pointer is null!" << std::endl; exit(1);}
       bestMove = *move;
     }
     node->undoMove(move.get());
@@ -37,6 +45,7 @@ Move pickMove(Board* node, Side side) {
 int main() {
   #ifdef DEBUG
     std::cout << "Debug mode enabled" << std::endl;
+
     // put this into the board
     // R.BQKB.R
     // PPPPPPPP
@@ -46,6 +55,7 @@ int main() {
     // ........
     // pppp.ppp
     // rnbqkbnr
+
     std::array<std::array<char, 8>, 8> sboard = {{
       {{'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'}},
       {{'p', 'p', 'p', 'p', '.', 'p', 'p', 'p'}},
@@ -55,10 +65,11 @@ int main() {
       {{'.', '.', 'N', '.', '.', 'N', '.', '.'}},
       {{'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'}},
       {{'R', '.', 'B', 'Q', 'K', 'B', '.', 'R'}}}};
+
     ull bbs[12] = {0ULL};
     toBitboard(sboard, bbs);
+
     auto board = Board(bbs, {'k', 'q'}, std::nullopt, 59, 3, false, false, 0, 0);
-    // std::cout << (board.getAttackers(BLACK) & board.readBlackBB()) << std::endl;
     for (auto& move : generateMoves(&board, BLACK)) {
       printMove(*move);
     }
@@ -67,18 +78,21 @@ int main() {
 
     Board testBoard = Board();
     Side currSide = WHITE;
+
+    int simulatedMovesLimit = 10;
+    int movesSimulated = 0;
+
     auto bestMove = pickMove(&testBoard, currSide);
-    int move_ct = 1;
-    while (bestMove.i() != bestMove.f()) {
+    while (!isMoveNull(&bestMove) && movesSimulated++ < simulatedMovesLimit) {
       testBoard.makeMove(&bestMove);
-      std::cout << "Move " << move_ct << ": "; printMove(bestMove);
+      std::cout << "Move " << movesSimulated << ": "; printMove(bestMove);
       testBoard.printBoard();
-      move_ct++;
-      if (move_ct > 10) {std::cout << "simulated 10 move(s)!" << std::endl; break;}
       currSide = (currSide == WHITE) ? BLACK : WHITE;
       bestMove = pickMove(&testBoard, currSide);
     }
+
+    std::cout << "Finished simulating " << movesSimulated << " move" << (movesSimulated == 1 ? "" : "s") << "!" << std::endl;
   #endif
-  
+  return 0;
 }
 #endif
