@@ -12,6 +12,20 @@
 
 using ull = uint64_t;
 
+// Get the type of piece on a given square for a given side
+static inline Pieces::piece getPieceType(Board* board, int square, Side side) {
+  bool isWhite = side == WHITE;
+
+  if (board->readBB(Pieces::type::PAWN,   side) & (1ULL << square)) return isWhite ? Pieces::piece::P : Pieces::piece::p;
+  if (board->readBB(Pieces::type::KNIGHT, side) & (1ULL << square)) return isWhite ? Pieces::piece::N : Pieces::piece::n;
+  if (board->readBB(Pieces::type::BISHOP, side) & (1ULL << square)) return isWhite ? Pieces::piece::B : Pieces::piece::b;
+  if (board->readBB(Pieces::type::ROOK,   side) & (1ULL << square)) return isWhite ? Pieces::piece::R : Pieces::piece::r;
+  if (board->readBB(Pieces::type::QUEEN,  side) & (1ULL << square)) return isWhite ? Pieces::piece::Q : Pieces::piece::q;
+  if (board->readBB(Pieces::type::KING,   side) & (1ULL << square)) return isWhite ? Pieces::piece::K : Pieces::piece::k;
+
+  throw std::runtime_error("No piece on square!"); 
+}
+
 const std::unordered_map<char, int> Board::castlingDestination = {
     {'k', 57},
     {'q', 61},
@@ -22,6 +36,18 @@ const std::unordered_map<char, int> Board::castlingDestination = {
 void Board::setBit(ull& bb, int bit) { bb |= 1ULL << bit; }
 
 void Board::clearBit(ull& bb, int bit) { bb &= ~(1ULL << bit); }
+
+void Board::removePiece(Pieces::piece piece, int square) {
+  clearBit(getBB(piece), square);
+  clearBit(getSide(piece) == WHITE ? whiteBB : blackBB, square);
+  clearBit(combinedBB, square);
+}
+
+void Board::placePiece(Pieces::piece piece, int square) {
+  setBit(getBB(piece), square);
+  setBit(getSide(piece) == WHITE ? whiteBB : blackBB, square);
+  setBit(combinedBB, square);
+}
 
 ull& Board::getBB(Pieces::piece piece) { return bbs[piece]; }
 
@@ -113,10 +139,7 @@ Board::Board()
       wKing{3},
       combinedBB{0xffff00000000ffff},
       whiteBB{0xffff},
-      blackBB{0xffff000000000000},
-      knightAttackBitmaps{compileKnightAttacks()},
-      kingAttackBitmaps{compileKingAttacks()},
-      slidingAttackBitmaps{compileSlidingAttacks()} {}
+      blackBB{0xffff000000000000} {}
 
 Board::Board(ull* currBBs, std::vector<char> currCastlingPrivileges,
              std::optional<int> currEnpassantSquare, int currBKing,
@@ -127,41 +150,56 @@ Board::Board(ull* currBBs, std::vector<char> currCastlingPrivileges,
       wKing{currWKing}, 
       combinedBB{findCombinedBB(currBBs)},
       whiteBB{findWhiteBB(currBBs)},
-      blackBB{findBlackBB(currBBs)},
-      knightAttackBitmaps{compileKnightAttacks()},
-      kingAttackBitmaps{compileKingAttacks()},
-      slidingAttackBitmaps{compileSlidingAttacks()} {
+      blackBB{findBlackBB(currBBs)} {
   std::copy(currBBs, currBBs + 12, bbs);
 }
 
 int Board::king(Side side) const { return side ? wKing : bKing; }
 
 void Board::makeMove(Move* move) {
-  if (move->flag() & Flags::ENPASSANT) {
-    clearBit(getCombinedBB(), move->f() & 7 + move->i() & 56);
-    clearBit(getBB(move->p()), move->f() & 7 + move->i() & 56);
+  // clear captured piece (if any)
+  if ((getSide(move->p()) == WHITE ? blackBB : whiteBB) & (1ULL << move->f())) {
+    auto capturedPiece = getPieceType(this, move->f(), getSide(move->p()) == WHITE ? BLACK : WHITE); 
+    removePiece(capturedPiece, move->f());
   }
-  clearBit(getBB(move->p()), move->i());
-  setBit(getBB(move->p()), move->f());
-  updateCombinedBB(move);
+  removePiece(move->p(), move->i());
+  placePiece(move->p(), move->f());
 
+  // udpate king positions
+  if (move->p() == Pieces::piece::K) {
+    wKing = move->f(); // update white king position
+  } else if (move->p() == Pieces::piece::k) {
+    bKing = move->f(); // update black king position
+  }
+
+  // handle enpassant
+  if (move->flag() & Flags::ENPASSANT) {
+    removePiece(move->p(), move->f() & 7 + move->i() & 56);
+  }
+  
+  // handle castle
   if (move->flag() & Flags::CASTLE) {
     int isLeftCastle = move->f() < move->i();
     int oldRookSquare = isLeftCastle * 7 + (move->i() & 56); 
     int newRookSquare = (move->i() + move->f()) / 2;
 
-    auto piece_t = getSide(move->p()) == WHITE ? Pieces::R : Pieces::r;
-    clearBit(getCombinedBB(), oldRookSquare);
-    clearBit(getBB(piece_t), oldRookSquare);
-    setBit(getCombinedBB(), newRookSquare);
-    setBit(getBB(piece_t), newRookSquare);
+    auto rook_t = getSide(move->p()) == WHITE ? Pieces::R : Pieces::r;
+    removePiece(rook_t, oldRookSquare);
+    placePiece(rook_t, newRookSquare);
   }
 
   // update enpassant square
-  if ((move->p() == Pieces::P || move->p() == Pieces::p) && (move->flag() & Flags::ENPASSANT)) {
+  if ((move->p() == Pieces::P || move->p() == Pieces::p) && (move->flag() & Flags::DOUBLESTEP)) {
     enpassantSquare = move->f();
   } else {
     enpassantSquare = std::nullopt;
+  }
+
+  // handle promotion
+  if (move->flag() & Flags::PROMOTION) {
+    removePiece(move->p(), move->f());
+    // AUTOMATIC PROMOTION TO QUEEN
+    placePiece(getSide(move->p()) == WHITE ? Pieces::Q : Pieces::q, move->f());
   }
 
   // update castling privileges
@@ -192,11 +230,9 @@ void Board::undoMove(Move* move) {
     int isLeftCastle = move->f() < move->i();
     int oldRookSquare = isLeftCastle * 7 + (move->i() & 56); 
     int newRookSquare = (move->i() + move->f()) / 2;
-    
     auto rook_t = getSide(move->p()) == WHITE ? Pieces::R : Pieces::r; 
     Move rookReverse(newRookSquare, oldRookSquare, rook_t);
     makeMove(&rookReverse);
-
     // reset castling privileges
     auto king = getSide(move->p()) == WHITE ? 'K' : 'k';
     auto queen = getSide(move->p()) == WHITE ? 'Q' : 'q';
@@ -208,23 +244,15 @@ void Board::undoMove(Move* move) {
     int enpassantSquare = move->f() & 7 + move->i() & 56;
     // insert pawn at enpassant square onto board
     auto pawn_t = getSide(move->p()) == WHITE ? Pieces::P : Pieces::p;
-    setBit(getCombinedBB(), enpassantSquare);
-    setBit(getBB(pawn_t), enpassantSquare);
-    setBit(getSide(move->p()) == WHITE ? whiteBB : blackBB, enpassantSquare);
-
+    placePiece(pawn_t, enpassantSquare);
     Move enpassantReverse(move->f(), move->i(), move->p());
     makeMove(&enpassantReverse);
   } else if (move->flag() & Flags::PROMOTION) {
     auto pawn_t = getSide(move->p()) == WHITE ? Pieces::P : Pieces::p;
-    setBit(getBB(pawn_t), move->i());
-    setBit(getCombinedBB(), move->i());
-    setBit(getSide(move->p()) == WHITE ? whiteBB : blackBB, move->i());
-
+    placePiece(pawn_t, move->i());
     // ASSUME PROMOTION TO QUEEN
     auto queen_t = getSide(move->p()) == WHITE ? Pieces::Q : Pieces::q;
-    clearBit(getCombinedBB(), move->f()); 
-    clearBit(getBB(queen_t), move->f());
-    clearBit(getSide(move->p()) == WHITE ? whiteBB : blackBB, move->f());
+    removePiece(queen_t, move->f());
   } else {
     Move reverse(move->f(), move->i(), move->p());
     makeMove(&reverse);
@@ -240,12 +268,6 @@ ull Board::readBlackBB() const { return blackBB; }
 ull Board::allyBB(Side side) const { return side ? whiteBB : blackBB; }
 
 ull Board::opposingBB(Side side) const { return side ? blackBB : whiteBB; }
-
-std::array<ull, 64> Board::knightAttacks() const { return knightAttackBitmaps; }
-
-std::array<ull, 64> Board::kingAttacks() const { return kingAttackBitmaps; }
-
-std::array<std::array<ull, 8>, 64> Board::slidingAttacks() const { return slidingAttackBitmaps; }
 
 void Board::printBoard() const {
   std::unordered_map<char, int> pieceIndex { /* map pieces to bb index*/
@@ -263,7 +285,7 @@ void Board::printBoard() const {
     std::string bitstring = std::bitset<64>(readBB(static_cast<Pieces::piece>(it->second))).to_string();
     for (int i = 0; i < 64; i++) {
       if (bitstring[i] == '1') {
-        stringifiedBoard[7 - (i / 8)][i % 8] = it->first;
+        stringifiedBoard[7 - (i / 8)][7 - i % 8] = it->first;
       }
     }
   }

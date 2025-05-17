@@ -23,11 +23,11 @@ class Board {
 
   ull combinedBB, whiteBB, blackBB;
 
-  std::array<ull, 64> knightAttackBitmaps, kingAttackBitmaps;
-  std::array<std::array<ull, 8>, 64> slidingAttackBitmaps;
-
   void setBit(ull&, int);
   void clearBit(ull&, int);
+
+  void removePiece(Pieces::piece, int);
+  void placePiece(Pieces::piece, int);
 
   ull& getBB(Pieces::piece);
 
@@ -47,19 +47,13 @@ class Board {
   inline void stripCastlingPrivileges(char);
 
  public:
-  // simplify second constructor 
   Board();
   Board(ull*, std::vector<char>, std::optional<int>, int, int);
 
   int king(Side) const;
-  bool isKingInCheck(Side) const;
 
   void makeMove(Move*);
   void undoMove(Move*);
-
-  ull getAttackers(Side) const;
-  void setAttackers(Side, int);
-  void clearAttackers(Side);
 
   int getEnpassantSquare() const;
   std::vector<char> getCastlingPrivileges() const;
@@ -75,15 +69,11 @@ class Board {
   ull allyBB(Side) const;
   ull opposingBB(Side) const;
 
-  std::array<ull, 64> knightAttacks() const;
-  std::array<ull, 64> kingAttacks() const;
-  std::array<std::array<ull, 8>, 64> slidingAttacks() const;
+  inline std::array<ull, 64> knightAttacks() const { return knightAttackBitmaps; };
+  inline std::array<ull, 64> kingAttacks() const { return kingAttackBitmaps; };
+  inline std::array<std::array<ull, 8>, 64> slidingAttacks() const { return slidingAttackBitmaps; };
 
   void printBoard() const;
 };
-
-namespace Attack { // forward declaration from kingSafety.cpp
-  // bool doesMovePutKingInCheck(Board*, Move*, Side);
-}
 
 #endif
