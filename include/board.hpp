@@ -50,24 +50,24 @@ class Board {
   Board();
   Board(ull*, std::vector<char>, std::optional<int>, int, int);
 
-  int king(Side) const;
+  int king(::Side) const;
 
   void makeMove(Move*);
   void undoMove(Move*);
 
   int getEnpassantSquare() const;
   std::vector<char> getCastlingPrivileges() const;
-  std::vector<int> availableCastlingDestinations(Side) const;
+  std::vector<int> availableCastlingDestinations(::Side) const;
 
   ull readBB(Pieces::piece) const;
-  ull readBB(Pieces::type, Side) const;
+  ull readBB(Pieces::type, ::Side) const;
 
   ull readCombinedBB() const;
   ull readWhiteBB() const;
   ull readBlackBB() const;
 
-  ull allyBB(Side) const;
-  ull opposingBB(Side) const;
+  ull allyBB(::Side) const;
+  ull opposingBB(::Side) const;
 
   inline std::array<ull, 64> knightAttacks() const { return knightAttackBitmaps; };
   inline std::array<ull, 64> kingAttacks() const { return kingAttackBitmaps; };
