@@ -8,7 +8,10 @@
 
 #include <iostream>
 
+// Uncomment for debugging mode
 // #define DEBUG
+
+// Uncomment for testing
 // #define TEST
 
 
