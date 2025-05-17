@@ -7,8 +7,6 @@
 
 enum Side { BLACK, WHITE };
 
-extern Side computerSide, opponentSide;
-
 inline Side getSide(Pieces::piece p) {
   return p >= Pieces::piece::P ? WHITE : BLACK;
 }
