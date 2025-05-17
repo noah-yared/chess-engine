@@ -20,7 +20,6 @@ Evaluation::Score alphaBeta(Board* node, int alpha, int beta, int depth, bool is
   auto possibleMoves = generateMoves(node, side);
 
   if (possibleMoves.empty()) {
-    std::cout << "no possible moves -- game over!" << std::endl;
     return Evaluation::Evaluator::evaluate(*node);
   }
 
