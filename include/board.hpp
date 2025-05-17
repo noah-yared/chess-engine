@@ -31,7 +31,6 @@ class Board {
 
   ull& getBB(Pieces::piece);
 
-  // change name of each findXX to computeXX
   ull findCombinedBB(ull*);
   ull findWhiteBB(ull*);
   ull findBlackBB(ull*);
@@ -39,10 +38,6 @@ class Board {
   ull& getCombinedBB();
   ull& getWhiteBB();
   ull& getBlackBB();
-
-  void updateCombinedBB(Move*);
-  void updateWhiteBB(Move*);
-  void updateBlackBB(Move*);
 
   inline void stripCastlingPrivileges(char);
 

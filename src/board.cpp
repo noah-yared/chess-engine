@@ -97,24 +97,6 @@ ull Board::findBlackBB(ull* bbs) {
   return blackBB;
 }
 
-void Board::updateCombinedBB(Move* move) {
-  ull& currCombinedBB = getCombinedBB();
-  clearBit(currCombinedBB, move->i());
-  setBit(currCombinedBB, move->f());
-}
-
-void Board::updateWhiteBB(Move* move) {
-  ull& currWhiteBB = getWhiteBB();
-  clearBit(currWhiteBB, move->i());
-  setBit(currWhiteBB, move->f());
-}
-
-void Board::updateBlackBB(Move* move) {
-  ull& currBlackBB = getBlackBB();
-  clearBit(currBlackBB, move->i());
-  setBit(currBlackBB, move->f());
-}
-
 void Board::stripCastlingPrivileges(char priv) {
   auto it = std::remove(castlingPrivileges.begin(), castlingPrivileges.end(), priv);
   castlingPrivileges.erase(it, castlingPrivileges.end());
@@ -204,7 +186,7 @@ void Board::makeMove(Move* move) {
 
   // update castling privileges
   if (getSide(move->p()) == WHITE){
-    updateWhiteBB(move);
+    // updateWhiteBB(move);
     if (move->p() == Pieces::K) {
       stripCastlingPrivileges('K');
       stripCastlingPrivileges('Q');
@@ -212,7 +194,7 @@ void Board::makeMove(Move* move) {
       (move->i() & 7) ? stripCastlingPrivileges('Q') : stripCastlingPrivileges('K');
     } 
   } else {
-    updateBlackBB(move);
+    // updateBlackBB(move);
     if (move->p() == Pieces::k) {
       stripCastlingPrivileges('k');
       stripCastlingPrivileges('q');
@@ -285,7 +267,7 @@ void Board::printBoard() const {
     std::string bitstring = std::bitset<64>(readBB(static_cast<Pieces::piece>(it->second))).to_string();
     for (int i = 0; i < 64; i++) {
       if (bitstring[i] == '1') {
-        stringifiedBoard[7 - (i / 8)][7 - i % 8] = it->first;
+        stringifiedBoard[i / 8][7 - (i % 8)] = it->first;
       }
     }
   }
