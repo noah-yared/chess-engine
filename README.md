@@ -23,3 +23,5 @@ cd chess-engine
 To build all the src/include files and run the code in main.cpp execute the command ```make run```.
 
 To run the tests in ```./tests/tests.cpp``` execute the command ```make tests```.
+
+To remove previously built executables before recompiling execute the command ```make clean```. 
