@@ -11,9 +11,9 @@ class Move {
 
  public:
   Move(int start, int end, Pieces::piece p)
-      : start(start), end(end), piece(p), flg(Flags::NONE) {};
+      : start(start), end(end), flg(Flags::NONE), piece(p) {};
   Move(int start, int end, Pieces::piece p, Flags::flag f)
-      : start(start), end(end), piece(p), flg(f) {};
+      : start(start), end(end), flg(f), piece(p) {};
 
   int i() const { return start; }
   int f() const { return end; }
