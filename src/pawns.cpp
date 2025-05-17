@@ -44,7 +44,7 @@ std::vector<std::unique_ptr<Move>> Pawn::getDoubleSteps(Board *board,
     Move move(square - 2 * sft, square, 
               (side == WHITE) ? Pieces::P : Pieces::p,
               Flags::DOUBLESTEP);
-    if (!doesMoveExposeAllyKingToCheck(board, &move, side)) {
+    if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)) {
       if (Attack::doesMovePutOpponentKingInCheck(board, &move, side)) {
         move.setFlag(Flags::CHECK);
       }
@@ -69,7 +69,7 @@ std::vector<std::unique_ptr<Move>> Pawn::getSingleSteps(Board *board,
     Move move(square - sft, square,
               (side == WHITE) ? Pieces::P : Pieces::p,
               (isPromoting ? Flags::PROMOTION : Flags::NONE));
-    if (!doesMoveExposeAllyKingToCheck(board, &move, side)) {
+    if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)) {
       if (Attack::doesMovePutOpponentKingInCheck(board, &move, side)) {
         move.setFlag(Flags::CHECK);
       }
@@ -115,7 +115,7 @@ std::vector<std::unique_ptr<Move>> Pawn::getDiagonalAttacks(Board *board,
       // left pawn attack
       Move move(square-lAtt, square, side ? Pieces::P : Pieces::p, 
                 (isPromoting ? Flags::PROMOTION : Flags::NONE));
-      if (!doesMoveExposeAllyKingToCheck(board, &move, side)) {
+      if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)) {
         if (Attack::doesMovePutOpponentKingInCheck(board, &move, side)) {
           move.setFlag(Flags::CHECK);
         }
@@ -126,7 +126,7 @@ std::vector<std::unique_ptr<Move>> Pawn::getDiagonalAttacks(Board *board,
       // right pawn attack
       Move move(square-rAtt, square, side ? Pieces::P : Pieces::p, 
                 ((square & 56) == 0 || (square & 56) == 0) ? Flags::PROMOTION : Flags::NONE);
-      if (!doesMoveExposeAllyKingToCheck(board, &move, side)) {
+      if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)) {
         if (Attack::doesMovePutOpponentKingInCheck(board, &move, side)) {
           move.setFlag(Flags::CHECK);
         }
@@ -150,7 +150,7 @@ std::optional<std::pair<std::unique_ptr<Move>, std::unique_ptr<Move>>> Pawn::get
   if (isLeftAttacking && (candidatePawnsBB & (1ULL << (enpassantSquare - lAtt)))) {
     // left pawn attack
     Move move(enpassantSquare-lAtt, enpassantSquare, side ? Pieces::P : Pieces::p, Flags::ENPASSANT);
-    if (!doesMoveExposeAllyKingToCheck(board, &move, side)){
+    if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)){
       if (Attack::doesMovePutOpponentKingInCheck(board, &move, side)) {
         move.setFlag(Flags::CHECK);
       }
@@ -160,7 +160,7 @@ std::optional<std::pair<std::unique_ptr<Move>, std::unique_ptr<Move>>> Pawn::get
   if (isRightAttacking && (candidatePawnsBB & (1ULL << (enpassantSquare - rAtt)))) {
     // right pawn attack
     Move move(enpassantSquare-rAtt, enpassantSquare, side ? Pieces::P : Pieces::p, Flags::ENPASSANT);
-    if (!doesMoveExposeAllyKingToCheck(board, &move, side)) {
+    if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)) {
       if (enpassantMoves.has_value()) {
         if (Attack::doesMovePutOpponentKingInCheck(board, &move, side)) {
           move.setFlag(Flags::CHECK);

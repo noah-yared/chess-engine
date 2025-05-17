@@ -40,7 +40,7 @@ std::vector<std::unique_ptr<Move>> Sliding::getMovesAlongDirection(
   for (int i = 1; i <= bitcnt; i++) {
     int finalSquare = square + bitinc * i;
     Move move(square, finalSquare, piece);
-    if (!doesMoveExposeAllyKingToCheck(board, &move, side)) {
+    if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)) {
       if (Attack::doesMovePutOpponentKingInCheck(board, &move, side))
         move.setFlag(Flags::CHECK);
       moves.emplace_back(std::make_unique<Move>(move));
