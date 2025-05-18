@@ -10,7 +10,6 @@
 #include <sstream>
 
 #include "attacks.h"  
-#include "bitboard.h"
 #include "utils.h"
 #include "directions.h"
 #include "Move.h"
@@ -19,6 +18,8 @@
 #include "king.h"
 #include "pawns.h"
 #include "sliding.h"
+#include "evaluate.h"
+
 #include "pawnBoards.hpp"
 #include "queenBoards.hpp"
 #include "rookBoards.hpp"
@@ -26,7 +27,6 @@
 #include "knightBoards.hpp"
 #include "kingBoards.hpp"
 #include "evalBoards.hpp"
-#include "evaluate.h"
 
 // using ull = unsigned long long;
 // using Moves = std::vector<std::unique_ptr<Move>>;
