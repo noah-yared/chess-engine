@@ -137,3 +137,24 @@ std::string hashMove(std::unique_ptr<Move>& move) {
   ss << (move->i() / 8) << (7 - move->i() % 8) << (move->f() / 8) << (7 - move->f() % 8);
   return ss.str(); 
 }
+
+// Get the type of piece on a given square for a given side
+Pieces::piece getPieceType(Board* board, int square, Side side) {
+  bool isWhite = side == WHITE;
+
+  if (board->readBB(Pieces::type::PAWN,   side) & (1ULL << square)) return isWhite ? Pieces::piece::P : Pieces::piece::p;
+  if (board->readBB(Pieces::type::KNIGHT, side) & (1ULL << square)) return isWhite ? Pieces::piece::N : Pieces::piece::n;
+  if (board->readBB(Pieces::type::BISHOP, side) & (1ULL << square)) return isWhite ? Pieces::piece::B : Pieces::piece::b;
+  if (board->readBB(Pieces::type::ROOK,   side) & (1ULL << square)) return isWhite ? Pieces::piece::R : Pieces::piece::r;
+  if (board->readBB(Pieces::type::QUEEN,  side) & (1ULL << square)) return isWhite ? Pieces::piece::Q : Pieces::piece::q;
+  if (board->readBB(Pieces::type::KING,   side) & (1ULL << square)) return isWhite ? Pieces::piece::K : Pieces::piece::k;
+
+  throw std::runtime_error("No piece on square!"); 
+}
+
+void checkAndSetCapture(Board* board, Move* move, Side side) {
+  if (board->opposingBB(side) & (1ULL << move->f())) {
+    move->setFlag(Flags::CAPTURE);
+    move->setCaptured(getPieceType(board, move->f(), side == WHITE ? BLACK : WHITE));
+  }
+}

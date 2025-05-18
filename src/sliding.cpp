@@ -11,6 +11,7 @@
 #include "kingSafety.h"
 #include "pieces.h"
 #include "sides.h"
+#include "utils.h"
 
 typedef unsigned long long ull;
 
@@ -40,6 +41,7 @@ std::vector<std::unique_ptr<Move>> Sliding::getMovesAlongDirection(
   for (int i = 1; i <= bitcnt; i++) {
     int finalSquare = square + bitinc * i;
     Move move(square, finalSquare, piece);
+    checkAndSetCapture(board, &move, side);
     if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)) {
       if (Attack::doesMovePutOpponentKingInCheck(board, &move, side))
         move.setFlag(Flags::CHECK);

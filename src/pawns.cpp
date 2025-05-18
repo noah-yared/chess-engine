@@ -1,13 +1,15 @@
 #include "pawns.h"
 
-#include <memory>
-#include <vector>
-#include <optional>
 #include "board.hpp"
 #include "Move.h"
 #include "kingSafety.h"
 #include "pieces.h"
 #include "sides.h"
+#include "utils.h"
+
+#include <memory>
+#include <vector>
+#include <optional>
 
 // bitmask to get important ranks/files
 ull firstFileBitmask  = 0x8080808080808080ULL;
@@ -113,6 +115,7 @@ std::vector<std::unique_ptr<Move>> Pawn::getDiagonalAttacks(Board *board,
       // left pawn attack
       Move move(square-lAtt, square, side ? Pieces::P : Pieces::p, 
                 (isPromoting ? Flags::PROMOTION : Flags::NONE));
+      checkAndSetCapture(board, &move, side);
       if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)) {
         if (Attack::doesMovePutOpponentKingInCheck(board, &move, side)) {
           move.setFlag(Flags::CHECK);
@@ -128,6 +131,7 @@ std::vector<std::unique_ptr<Move>> Pawn::getDiagonalAttacks(Board *board,
         if (Attack::doesMovePutOpponentKingInCheck(board, &move, side)) {
           move.setFlag(Flags::CHECK);
         }
+        checkAndSetCapture(board, &move, side);
         attackingMoves.emplace_back(std::make_unique<Move>(move));
       } 
     }

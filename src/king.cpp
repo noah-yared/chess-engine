@@ -1,5 +1,9 @@
 #include "king.h"
 #include "kingSafety.h"
+#include "Move.h"
+#include "utils.h"
+
+#include <memory>
 
 std::vector<std::unique_ptr<Move>> King::generateMoves(Board *board, Side side) {
   int king = board->king(side);
@@ -11,9 +15,10 @@ std::vector<std::unique_ptr<Move>> King::generateMoves(Board *board, Side side) 
   auto piece_t = side ? Pieces::K : Pieces::k;
   while (attacks) {
     int square = __builtin_ctzll(attacks);
+    Move move(king, square, piece_t);
+    checkAndSetCapture(board, &move, side);
     if (Attack::isSquareUnattacked(board, square, side)) {
       // safe square for king so add move
-      Move move(king, square, piece_t);
       kingMoves.emplace_back(std::make_unique<Move>(move));
     }
     attacks &= (attacks - 1);

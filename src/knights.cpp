@@ -8,6 +8,7 @@
 #include "kingSafety.h"
 #include "pieces.h"
 #include "sides.h"
+#include "utils.h"
 
 std::vector<std::unique_ptr<Move>> Knight::generateMoves(Board *board,
                                                          Side side) {
@@ -22,6 +23,7 @@ std::vector<std::unique_ptr<Move>> Knight::generateMoves(Board *board,
     while (knightAttacks) {
       int attackIndex = __builtin_ctzll(knightAttacks);
       Move move(knightIndex, attackIndex, side == WHITE ? Pieces::N : Pieces::n);
+      checkAndSetCapture(board, &move, side);
       if (!Attack::doesMoveExposeAllyKingToCheck(board, &move, side)) {
         if (Attack::doesMovePutOpponentKingInCheck(board, &move, side)) {
           move.setFlag(Flags::CHECK);

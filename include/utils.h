@@ -53,4 +53,7 @@ std::string stringify(std::pair<Tile, Tile>);
 std::string hashMove(std::pair<Tile, Tile> move);
 std::string hashMove(std::unique_ptr<Move>& move);
 
+Pieces::piece getPieceType(Board* board, int square, Side side);
+void checkAndSetCapture(Board* board, Move* move, Side side);
+
 #endif
