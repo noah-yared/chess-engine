@@ -12,27 +12,6 @@
 
 using ull = uint64_t;
 
-// Get the type of piece on a given square for a given side
-static inline Pieces::piece getPieceType(Board* board, int square, Side side) {
-  bool isWhite = side == WHITE;
-
-  if (board->readBB(Pieces::type::PAWN,   side) & (1ULL << square)) return isWhite ? Pieces::piece::P : Pieces::piece::p;
-  if (board->readBB(Pieces::type::KNIGHT, side) & (1ULL << square)) return isWhite ? Pieces::piece::N : Pieces::piece::n;
-  if (board->readBB(Pieces::type::BISHOP, side) & (1ULL << square)) return isWhite ? Pieces::piece::B : Pieces::piece::b;
-  if (board->readBB(Pieces::type::ROOK,   side) & (1ULL << square)) return isWhite ? Pieces::piece::R : Pieces::piece::r;
-  if (board->readBB(Pieces::type::QUEEN,  side) & (1ULL << square)) return isWhite ? Pieces::piece::Q : Pieces::piece::q;
-  if (board->readBB(Pieces::type::KING,   side) & (1ULL << square)) return isWhite ? Pieces::piece::K : Pieces::piece::k;
-
-  throw std::runtime_error("No piece on square!"); 
-}
-
-const std::unordered_map<char, int> Board::castlingDestination = {
-    {'k', 57},
-    {'q', 61},
-    {'K', 1},
-    {'Q', 5}
-};
-
 void Board::setBit(ull& bb, int bit) { bb |= 1ULL << bit; }
 
 void Board::clearBit(ull& bb, int bit) { bb &= ~(1ULL << bit); }
@@ -56,6 +35,8 @@ ull Board::readBB(Pieces::piece piece) const { return bbs[piece]; }
 ull Board::readBB(Pieces::type pieceType, Side side) const { return bbs[pieceType + 6 * (side == WHITE)]; }
 
 int Board::getEnpassantSquare() const { return enpassantSquare.has_value() ? enpassantSquare.value() : -1; }
+
+void Board::setEnpassantSquare(std::optional<int> square) { enpassantSquare = square; }
 
 std::vector<char> Board::getCastlingPrivileges() const { return castlingPrivileges; }
 
@@ -139,11 +120,6 @@ Board::Board(ull* currBBs, std::vector<char> currCastlingPrivileges,
 int Board::king(Side side) const { return side ? wKing : bKing; }
 
 void Board::makeMove(Move* move) {
-  // clear captured piece (if any)
-  if ((getSide(move->p()) == WHITE ? blackBB : whiteBB) & (1ULL << move->f())) {
-    auto capturedPiece = getPieceType(this, move->f(), getSide(move->p()) == WHITE ? BLACK : WHITE); 
-    removePiece(capturedPiece, move->f());
-  }
   removePiece(move->p(), move->i());
   placePiece(move->p(), move->f());
 
@@ -154,13 +130,26 @@ void Board::makeMove(Move* move) {
     bKing = move->f(); // update black king position
   }
 
+  // handle pawn double step 
+  if (move->isDoublePawnPush()) {
+    setEnpassantSquare(std::optional<int>((move->i() + move->f()) / 2));
+  } else {
+    setEnpassantSquare(std::nullopt);
+  }
+
+  // handle capture
+  if (move->isCapture()) {
+    removePiece(move->capturedPiece(), move->f());
+  }
+
   // handle enpassant
-  if (move->flag() & Flags::ENPASSANT) {
-    removePiece(move->p(), move->f() & 7 + move->i() & 56);
+  if (move->isEnpassant()) {
+    // removed captured pawn
+    removePiece(getSide(move->p()) == WHITE ? Pieces::p : Pieces::P, move->f() & 7 + move->i() & 56);
   }
   
   // handle castle
-  if (move->flag() & Flags::CASTLE) {
+  if (move->isCastle()) {
     int isLeftCastle = move->f() < move->i();
     int oldRookSquare = isLeftCastle * 7 + (move->i() & 56); 
     int newRookSquare = (move->i() + move->f()) / 2;
@@ -171,14 +160,14 @@ void Board::makeMove(Move* move) {
   }
 
   // update enpassant square
-  if ((move->p() == Pieces::P || move->p() == Pieces::p) && (move->flag() & Flags::DOUBLESTEP)) {
+  if ((move->p() == Pieces::P || move->p() == Pieces::p) && (move->isDoublePawnPush())) {
     enpassantSquare = move->f();
   } else {
     enpassantSquare = std::nullopt;
   }
 
   // handle promotion
-  if (move->flag() & Flags::PROMOTION) {
+  if (move->isPromotion()) {
     removePiece(move->p(), move->f());
     // AUTOMATIC PROMOTION TO QUEEN
     placePiece(getSide(move->p()) == WHITE ? Pieces::Q : Pieces::q, move->f());
@@ -208,11 +197,27 @@ void Board::undoMove(Move* move) {
   if (!move) {
     std::cerr << "no move to undo";
   }
-  if (move->flag() & Flags::CASTLE) {
+
+  if (!move->isPromotion()) {
+    Move reverseMove(move->f(), move->i(), move->p());
+    makeMove(&reverseMove);
+  }
+
+  if (move->isCapture()) {
+    placePiece(move->capturedPiece(), move->f());
+  }
+
+  if (move->isDoublePawnPush()) {
+    // remove enpassant square
+    setEnpassantSquare(std::nullopt);
+  }
+
+  if (move->isCastle()) {
     int isLeftCastle = move->f() < move->i();
     int oldRookSquare = isLeftCastle * 7 + (move->i() & 56); 
     int newRookSquare = (move->i() + move->f()) / 2;
     auto rook_t = getSide(move->p()) == WHITE ? Pieces::R : Pieces::r; 
+    // move rook back
     Move rookReverse(newRookSquare, oldRookSquare, rook_t);
     makeMove(&rookReverse);
     // reset castling privileges
@@ -222,22 +227,24 @@ void Board::undoMove(Move* move) {
     if (isLeftCastle) {
       castlingPrivileges.push_back(queen);
     }
-  } else if (move->flag() & Flags::ENPASSANT) {
+  } 
+  
+  if (move->isEnpassant()) {
     int enpassantSquare = move->f() & 7 + move->i() & 56;
-    // insert pawn at enpassant square onto board
-    auto pawn_t = getSide(move->p()) == WHITE ? Pieces::P : Pieces::p;
+    // insert captured pawn at enpassant square onto board
+    auto pawn_t = getSide(move->p()) == WHITE ? Pieces::p : Pieces::P;
     placePiece(pawn_t, enpassantSquare);
-    Move enpassantReverse(move->f(), move->i(), move->p());
-    makeMove(&enpassantReverse);
-  } else if (move->flag() & Flags::PROMOTION) {
+    // set enpassant square
+    setEnpassantSquare(enpassantSquare);
+  } 
+  
+  if (move->isPromotion()) {
+    // move promoted pawn back
     auto pawn_t = getSide(move->p()) == WHITE ? Pieces::P : Pieces::p;
     placePiece(pawn_t, move->i());
-    // ASSUME PROMOTION TO QUEEN
+    // ASSUME PROMOTION TO QUEEN so remove queen
     auto queen_t = getSide(move->p()) == WHITE ? Pieces::Q : Pieces::q;
     removePiece(queen_t, move->f());
-  } else {
-    Move reverse(move->f(), move->i(), move->p());
-    makeMove(&reverse);
   }
 }
 
@@ -267,7 +274,7 @@ void Board::printBoard() const {
     std::string bitstring = std::bitset<64>(readBB(static_cast<Pieces::piece>(it->second))).to_string();
     for (int i = 0; i < 64; i++) {
       if (bitstring[i] == '1') {
-        stringifiedBoard[i / 8][7 - (i % 8)] = it->first;
+        stringifiedBoard[i / 8][i % 8] = it->first;
       }
     }
   }
