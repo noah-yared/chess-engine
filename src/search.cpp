@@ -5,11 +5,13 @@
  
 #include "movegen.h"
 #include "search.h"
+#include "search_utils.h"
 #include "evaluate.h"
 #include "board.hpp"
 #include "Move.h"
 #include "sides.h"
 
+SearchPath stateHistory;
 
 Evaluation::Score alphaBeta(Board* node, int alpha, int beta, int depth, bool isMaximizingPlayer, Side side) {
 
@@ -25,17 +27,19 @@ Evaluation::Score alphaBeta(Board* node, int alpha, int beta, int depth, bool is
 
   if (isMaximizingPlayer) { // white
     for (const auto& move : possibleMoves) {
-      auto newNode = Board(*node);
-      newNode.makeMove(move.get());
-      alpha = std::max(alpha, alphaBeta(&newNode, alpha, beta, depth-1, false, side == WHITE ? BLACK : WHITE));
+      node->makeMove(move.get());
+      stateHistory.push(node->pullState());
+      alpha = std::max(alpha, alphaBeta(node, alpha, beta, depth-1, false, side == WHITE ? BLACK : WHITE));
+      node->undoMove(move.get(), stateHistory.pop());
       if (beta <= alpha) break;
     }
     return alpha;
   } else {
     for (const auto& move : possibleMoves) {
-      auto newNode = Board(*node);
-      newNode.makeMove(move.get());
-      beta = std::min(beta, alphaBeta(&newNode, alpha, beta, depth-1, true, side == WHITE ? BLACK : WHITE));
+      node->makeMove(move.get());
+      stateHistory.push(node->pullState());
+      beta = std::min(beta, alphaBeta(node, alpha, beta, depth-1, true, side == WHITE ? BLACK : WHITE));
+      node->undoMove(move.get(), stateHistory.pop());
       if (beta <= alpha) break;
     }
     return beta;
