@@ -28,9 +28,9 @@ void Board::placePiece(Pieces::piece piece, int square) {
   setBit(combinedBB, square);
 }
 
-ull& Board::getBB(Pieces::piece piece) { return bbs[piece]; }
+ull& Board::getBB(Pieces::piece piece) { return bbs[piece-1]; }
 
-ull Board::readBB(Pieces::piece piece) const { return bbs[piece]; }
+ull Board::readBB(Pieces::piece piece) const { return bbs[piece-1]; }
 
 ull Board::readBB(Pieces::type pieceType, Side side) const { return bbs[pieceType + 6 * (side == WHITE)]; }
 
