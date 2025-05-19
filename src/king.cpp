@@ -29,7 +29,8 @@ std::vector<std::unique_ptr<Move>> King::generateMoves(Board *board, Side side) 
     ull bitmask = queenSide ? 0x7000000000000070ULL : 0x600000000000006ULL;
     int lane = queenSide ? WEST : EAST;
     if (board->slidingAttacks()[king][lane] & board->readCombinedBB() & bitmask) continue;
-    if (Attack::isSquareUnattacked(board, king + 2 * (queenSide - 1), side)
+    if (   Attack::isSquareUnattacked(board, king, side)
+        && Attack::isSquareUnattacked(board, (king + square) / 2, side)
         && Attack::isSquareUnattacked(board, square, side)) { // free to castle
           Move move(king, square, piece_t, Flags::CASTLE);
           kingMoves.emplace_back(std::make_unique<Move>(move));
