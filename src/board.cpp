@@ -96,7 +96,7 @@ Board::Board()
           0x24ULL,
           0x10ULL,
           0x8ULL},
-      bitfield{0b1111'000011'1111011'0'000000},
+      bitfield{0b000000'0'111011'000011'1111},
       whiteBB{0xffff},
       blackBB{0xffff000000000000} {}
 
@@ -210,7 +210,7 @@ void Board::undoMove(Move* move, uint32_t parentState) {
 
     // revert to pre-castle
     if (move->isCastle()) {
-      int isLeftCastle = move->f() < move->i();
+      int isLeftCastle = move->f() > move->i();
       int oldRookSquare = isLeftCastle * 7 + (move->i() & 56); 
       int newRookSquare = (move->i() + move->f()) / 2;
       auto rook_t = getSide(move->p()) == WHITE ? Pieces::R : Pieces::r; 
