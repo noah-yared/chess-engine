@@ -3,6 +3,8 @@
 #include "pieces.h"
 #include "movegen.h"
 #include "evaluate.h"
+#include "search_utils.h"
+#include "search.h"
 #include "utils.h"
 #include "main.h"
 
@@ -17,11 +19,14 @@
 
 static const int SEARCH_DEPTH = 3;
 
-static const auto nullMove = Move(0, 0, static_cast<Pieces::piece>(0));
+// static const auto nullMove = Move(0, 0, static_cast<Pieces::piece>(0));
+static const auto nullMove = Move();
 
 static bool isMoveNull(Move* move) {
   return move->i() == nullMove.i() && move->f() == nullMove.f() && move->p() == nullMove.p();
 }
+
+static SearchPath stateHistory;
 
 Move pickMove(Board* node, Side side) {
   auto possibleMoves = generateMoves(node, side);
@@ -29,9 +34,10 @@ Move pickMove(Board* node, Side side) {
   Move bestMove = nullMove;
   for (const auto& move : possibleMoves) {
     assert(move);
-    auto newNode = Board(*node);
-    newNode.makeMove(move.get());
-    int score = alphaBeta(&newNode, NEGINF, POSINF, SEARCH_DEPTH, false, side == WHITE ? BLACK : WHITE);
+    stateHistory.push(node->pullState());
+    node->makeMove(move.get());
+    int score = alphaBeta(node, NEGINF, POSINF, SEARCH_DEPTH, false, side == WHITE ? BLACK : WHITE);
+    node->undoMove(move.get(), stateHistory.pop());
     if ((side == WHITE && score > bestScore) || (side == BLACK && score < bestScore)) {
       bestScore = score;
       bestMove = *move;
@@ -85,13 +91,15 @@ int main() {
     auto bestMove = pickMove(&testBoard, currSide);
     while (!isMoveNull(&bestMove) && movesSimulated < simulatedMovesLimit) {
       testBoard.makeMove(&bestMove);
-      std::cout << "Move " << movesSimulated++ << ": "; printMove(bestMove);
+      std::cout << "Move " << std::dec << (++movesSimulated) << ": "; printMove(bestMove);
+      std::cout << "State: 0x" << std::hex << testBoard.pullState() << std::endl;
       testBoard.printBoard();
       currSide = (currSide == WHITE) ? BLACK : WHITE;
       bestMove = pickMove(&testBoard, currSide);
     }
 
-    std::cout << "Finished simulating " << movesSimulated << " move" << (movesSimulated == 1 ? "" : "s") << "!" << std::endl;
+    std::cout << "Finished simulating " << std::dec << movesSimulated << " move" << (movesSimulated == 1 ? "" : "s") << "!" << std::endl;
+    std::cout << "Explored " << std::dec << NODES_EXPLORED << " nodes!" << std::endl;
   #endif
   return 0;
 }
