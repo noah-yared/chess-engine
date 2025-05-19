@@ -142,8 +142,9 @@ std::vector<std::unique_ptr<Move>> Pawn::getDiagonalAttacks(Board *board,
 
 std::optional<std::pair<std::unique_ptr<Move>, std::unique_ptr<Move>>> Pawn::getEnpassantMoves(Board *board, Side side) {
   std::optional<std::pair<std::unique_ptr<Move>, std::unique_ptr<Move>>> enpassantMoves = std::nullopt;
-  int enpassantSquare = board->getEnpassantSquare();
-  if (enpassantSquare == -1) return enpassantMoves;
+  auto enpassantSquareOpt = board->getEnpassantSquare();
+  if (!enpassantSquareOpt.has_value()) return enpassantMoves;
+  int enpassantSquare = enpassantSquareOpt.value();
   ull candidatePawnsBB = board->readBB((Pieces::piece)(side ? Pieces::P : Pieces::p));
   int sign = 2 * (side == WHITE) - 1;
   int lAtt = sign * (8 + sign), rAtt = sign * (8 - sign);
