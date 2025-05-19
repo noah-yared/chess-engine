@@ -11,6 +11,7 @@
 #include "Move.h"
 #include "sides.h"
 
+
 SearchPath stateHistory;
 
 Evaluation::Score alphaBeta(Board* node, int alpha, int beta, int depth, bool isMaximizingPlayer, Side side) {
@@ -20,6 +21,7 @@ Evaluation::Score alphaBeta(Board* node, int alpha, int beta, int depth, bool is
   }
 
   auto possibleMoves = generateMoves(node, side);
+  NODES_EXPLORED += possibleMoves.size();
 
   if (possibleMoves.empty()) {
     return Evaluation::Evaluator::evaluate(*node);
@@ -27,8 +29,9 @@ Evaluation::Score alphaBeta(Board* node, int alpha, int beta, int depth, bool is
 
   if (isMaximizingPlayer) { // white
     for (const auto& move : possibleMoves) {
-      node->makeMove(move.get());
+      // save state to history
       stateHistory.push(node->pullState());
+      node->makeMove(move.get());
       alpha = std::max(alpha, alphaBeta(node, alpha, beta, depth-1, false, side == WHITE ? BLACK : WHITE));
       node->undoMove(move.get(), stateHistory.pop());
       if (beta <= alpha) break;
@@ -36,8 +39,9 @@ Evaluation::Score alphaBeta(Board* node, int alpha, int beta, int depth, bool is
     return alpha;
   } else {
     for (const auto& move : possibleMoves) {
-      node->makeMove(move.get());
+      // save state to history
       stateHistory.push(node->pullState());
+      node->makeMove(move.get());
       beta = std::min(beta, alphaBeta(node, alpha, beta, depth-1, true, side == WHITE ? BLACK : WHITE));
       node->undoMove(move.get(), stateHistory.pop());
       if (beta <= alpha) break;
