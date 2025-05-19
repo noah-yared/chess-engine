@@ -30,14 +30,14 @@ bool inBounds(int square) {
 bool Attack::isPawnAttackingSquare(Board* board, int king, Side attackingSide) {
   int col = king & 8;
   // bottom right to top left diagonal
-  if (((col != 0) && (attackingSide == WHITE)) || ((col != 7) && (attackingSide == BLACK))) {
+  if (((col != 7) && (attackingSide == WHITE)) || ((col != 0) && (attackingSide == BLACK))) {
     int bitjmp = (attackingSide == WHITE) ? -9 : 9;
     if (inBounds(king+bitjmp) && (board->readBB(Pieces::type::PAWN, attackingSide) & (1ULL << (king+bitjmp)))) {
       return true;
     }
   }
   // bottom left to top right diagonal
-  if (((col != 0) && (attackingSide == BLACK)) || ((col != 7) && (attackingSide == WHITE)) ) {
+  if (((col != 7) && (attackingSide == BLACK)) || ((col != 0) && (attackingSide == WHITE)) ) {
     int bitjmp = (attackingSide == WHITE) ? -7 : 7;
     if (inBounds(king+bitjmp) && (board->readBB(Pieces::type::PAWN, attackingSide) & (1ULL << (king+bitjmp)))) {
       return true;
