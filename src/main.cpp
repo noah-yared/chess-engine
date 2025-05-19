@@ -29,13 +29,13 @@ Move pickMove(Board* node, Side side) {
   Move bestMove = nullMove;
   for (const auto& move : possibleMoves) {
     assert(move);
-    node->makeMove(move.get());
-    int score = alphaBeta(node, NEGINF, POSINF, SEARCH_DEPTH, false, side == WHITE ? BLACK : WHITE);
+    auto newNode = Board(*node);
+    newNode.makeMove(move.get());
+    int score = alphaBeta(&newNode, NEGINF, POSINF, SEARCH_DEPTH, false, side == WHITE ? BLACK : WHITE);
     if ((side == WHITE && score > bestScore) || (side == BLACK && score < bestScore)) {
       bestScore = score;
       bestMove = *move;
     }
-    node->undoMove(move.get());
   }
   return bestMove;
 }
@@ -83,9 +83,9 @@ int main() {
     int movesSimulated = 0;
 
     auto bestMove = pickMove(&testBoard, currSide);
-    while (!isMoveNull(&bestMove) && movesSimulated++ < simulatedMovesLimit) {
+    while (!isMoveNull(&bestMove) && movesSimulated < simulatedMovesLimit) {
       testBoard.makeMove(&bestMove);
-      std::cout << "Move " << movesSimulated << ": "; printMove(bestMove);
+      std::cout << "Move " << movesSimulated++ << ": "; printMove(bestMove);
       testBoard.printBoard();
       currSide = (currSide == WHITE) ? BLACK : WHITE;
       bestMove = pickMove(&testBoard, currSide);
