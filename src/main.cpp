@@ -17,7 +17,7 @@
 // Uncomment for testing
 // #define TEST
 
-static const int SEARCH_DEPTH = 3;
+static const int SEARCH_DEPTH = 4;
 
 // static const auto nullMove = Move(0, 0, static_cast<Pieces::piece>(0));
 static const auto nullMove = Move();
@@ -64,20 +64,42 @@ int main() {
 
     std::array<std::array<char, 8>, 8> sboard = {{
       {{'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'}},
-      {{'p', 'p', 'p', 'p', '.', 'p', 'p', 'p'}},
+      {{'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'}},
       {{'.', '.', '.', '.', '.', '.', '.', '.'}},
-      {{'.', '.', '.', '.', 'p', '.', '.', '.'}},
       {{'.', '.', '.', '.', '.', '.', '.', '.'}},
-      {{'.', '.', 'N', '.', '.', 'N', '.', '.'}},
+      {{'.', '.', '.', '.', '.', '.', '.', '.'}},
+      {{'.', '.', '.', '.', '.', '.', '.', '.'}},
       {{'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'}},
-      {{'R', '.', 'B', 'Q', 'K', 'B', '.', 'R'}}}};
+      {{'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}}}};
 
     ull bbs[12] = {0ULL};
     toBitboard(sboard, bbs);
 
-    auto board = Board(bbs, {'k', 'q'}, std::nullopt, 59, 3, false, false, 0, 0);
-    for (auto& move : generateMoves(&board, BLACK)) {
-      printMove(*move);
+    auto board = Board(bbs, {'k', 'q'}, std::nullopt, 59, 3);
+    std::vector<Move> moves = {
+      Move(1, 18, Pieces::piece::N),
+      Move(50, 34, Pieces::piece::p, Flags::DOUBLESTEP),
+      Move(9, 25, Pieces::piece::P, Flags::DOUBLESTEP),
+      Move(57, 42, Pieces::piece::n),
+      Move(25, 33, Pieces::piece::P),
+      Move(48, 32, Pieces::piece::p, Flags::DOUBLESTEP),
+      Move(33, 40, Pieces::piece::P, Flags::ENPASSANT)
+    };
+    
+    SearchPath stateHistory;
+    for (int i = 0; i < moves.size(); i++) {
+      stateHistory.push(board.pullState());
+      board.makeMove(&moves[i]);
+      std::cout << "Making Move " << std::dec << (i + 1) << ": " << std::dec << moves[i].i() << " -> " << std::dec << moves[i].f() << std::endl;
+      std::cout << "Updated Board:\n"; board.printBoard();
+      std::cout << "Updated State: 0x" << std::hex << board.pullState() << std::endl << std::endl;
+    }
+
+    for (int i = moves.size() - 1; i >= 0; i--) {
+      board.undoMove(&moves[i], stateHistory.pop());
+      std::cout << "Undoing Move " << std::dec << (i + 1) << ": " << moves[i].i() << " -> " << moves[i].f() << std::endl;
+      std::cout << "Updated Board:\n"; board.printBoard();
+      std::cout << "Updated State: 0x" << std::hex << board.pullState() << std::endl << std::endl;
     }
   #else
     std::cout << "Debug mode disabled" << std::endl;
