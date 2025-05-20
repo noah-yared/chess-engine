@@ -17,7 +17,7 @@
 // Uncomment for testing
 // #define TEST
 
-static const int SEARCH_DEPTH = 4;
+static const int SEARCH_DEPTH = 3;
 
 // static const auto nullMove = Move(0, 0, static_cast<Pieces::piece>(0));
 static const auto nullMove = Move();
