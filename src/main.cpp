@@ -75,7 +75,7 @@ int main() {
     ull bbs[12] = {0ULL};
     toBitboard(sboard, bbs);
 
-    auto board = Board(bbs, {'k', 'q'}, std::nullopt, 59, 3);
+    auto board = Board(bbs, {'k', 'q', 'K', 'Q'}, std::nullopt, 59, 3);
     std::vector<Move> moves = {
       Move(1, 18, Pieces::piece::N),
       Move(50, 34, Pieces::piece::p, Flags::DOUBLESTEP),
@@ -83,16 +83,21 @@ int main() {
       Move(57, 42, Pieces::piece::n),
       Move(25, 33, Pieces::piece::P),
       Move(48, 32, Pieces::piece::p, Flags::DOUBLESTEP),
-      Move(33, 40, Pieces::piece::P, Flags::ENPASSANT)
+      Move(33, 40, Pieces::piece::P, Flags::ENPASSANT),
+      Move(51, 43, Pieces::piece::p),
+      Move(2, 9, Pieces::piece::B),
+      Move(58, 51, Pieces::piece::b),
+      Move(3, 1, Pieces::piece::K, Flags::CASTLE),
+      Move(59, 57, Pieces::piece::k, Flags::CASTLE),
     };
     
     SearchPath stateHistory;
     for (int i = 0; i < moves.size(); i++) {
       stateHistory.push(board.pullState());
       board.makeMove(&moves[i]);
-      std::cout << "Making Move " << std::dec << (i + 1) << ": " << std::dec << moves[i].i() << " -> " << std::dec << moves[i].f() << std::endl;
+      std::cout << "Making Move " << (i + 1) << ": " << moves[i].i() << " -> " << moves[i].f() << std::endl;
       std::cout << "Updated Board:\n"; board.printBoard();
-      std::cout << "Updated State: 0x" << std::hex << board.pullState() << std::endl << std::endl;
+      std::cout << "Updated State: 0x" << std::hex << board.pullState() << std::dec << std::endl << std::endl;
     }
 
     for (int i = moves.size() - 1; i >= 0; i--) {
