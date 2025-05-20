@@ -5,6 +5,13 @@
 
 #include <memory>
 
+namespace CastlingMasks {
+static const ull BLACK_QUEENSIDE_CASTLE_MASK = 0x70ULL << 56;
+static const ull BLACK_KINGSIDE_CASTLE_MASK = 0x06ULL << 56;
+static const ull WHITE_QUEENSIDE_CASTLE_MASK = 0x70ULL;
+static const ull WHITE_KINGSIDE_CASTLE_MASK = 0x06ULL;
+}
+
 std::vector<std::unique_ptr<Move>> King::generateMoves(Board *board, Side side) {
   int king = board->king(side);
   ull attacks = board->kingAttacks()[king] & ~board->allyBB(side);
@@ -23,18 +30,24 @@ std::vector<std::unique_ptr<Move>> King::generateMoves(Board *board, Side side) 
     }
     attacks &= (attacks - 1);
   }
+
+  ull combinedBB = board->readCombinedBB();
   // handle castling moves
   for (auto square : board->availableCastlingDestinations(side)) {
     bool queenSide = square > king;
-    ull bitmask = queenSide ? 0x7000000000000070ULL : 0x600000000000006ULL;
-    int lane = queenSide ? WEST : EAST;
-    if (board->slidingAttacks()[king][lane] & board->readCombinedBB() & bitmask) continue;
-    if (   Attack::isSquareUnattacked(board, king, side)
-        && Attack::isSquareUnattacked(board, (king + square) / 2, side)
-        && Attack::isSquareUnattacked(board, square, side)) { // free to castle
-          Move move(king, square, piece_t, Flags::CASTLE);
-          kingMoves.emplace_back(std::make_unique<Move>(move));
-        }
+    // mask for checking that no pieces between king and rook
+    ull intermediateBitmask = queenSide ? (side == WHITE ? CastlingMasks::WHITE_QUEENSIDE_CASTLE_MASK : CastlingMasks::BLACK_QUEENSIDE_CASTLE_MASK) 
+                            : (side == WHITE ? CastlingMasks::WHITE_KINGSIDE_CASTLE_MASK : CastlingMasks::BLACK_KINGSIDE_CASTLE_MASK);
+    // skip if piece between king and rook
+    if (combinedBB & intermediateBitmask) continue;
+    // make sure no pieces attacking squares between rook and king
+    if (  Attack::isSquareUnattacked(board, king, side)
+       && Attack::isSquareUnattacked(board, (king + square) / 2, side)
+       && Attack::isSquareUnattacked(board, square, side)) 
+      {
+        Move move(king, square, piece_t, Flags::CASTLE);
+        kingMoves.emplace_back(std::make_unique<Move>(move));
+      }
   }
   return kingMoves;
 }
