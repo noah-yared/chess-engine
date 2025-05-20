@@ -28,7 +28,7 @@ bool inBounds(int square) {
 }
 
 bool Attack::isPawnAttackingSquare(Board* board, int king, Side attackingSide) {
-  int col = king & 8;
+  int col = king & 7;
   // bottom right to top left diagonal
   if (((col != 7) && (attackingSide == WHITE)) || ((col != 0) && (attackingSide == BLACK))) {
     int bitjmp = (attackingSide == WHITE) ? -9 : 9;
