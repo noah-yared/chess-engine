@@ -141,7 +141,7 @@ void Board::makeMove(Move* move) {
   // handle enpassant
   if (move->isEnpassant()) {
     // removed captured pawn
-    removePiece(getSide(move->p()) == WHITE ? Pieces::p : Pieces::P, move->f() & 7 + move->i() & 56);
+    removePiece(getSide(move->p()) == WHITE ? Pieces::p : Pieces::P, (move->f() & 7) + (move->i() & 56));
   }
   
   // handle castle
@@ -153,13 +153,6 @@ void Board::makeMove(Move* move) {
     auto rook_t = getSide(move->p()) == WHITE ? Pieces::R : Pieces::r;
     removePiece(rook_t, oldRookSquare);
     placePiece(rook_t, newRookSquare);
-  }
-
-  // update enpassant square
-  if ((move->p() == Pieces::P || move->p() == Pieces::p) && (move->isDoublePawnPush())) {
-    setEnpassantSquare(move->f());
-  } else {
-    setEnpassantSquare(std::nullopt);
   }
 
   // handle promotion
@@ -221,10 +214,10 @@ void Board::undoMove(Move* move, uint32_t parentState) {
 
     // revert to pre-enpassant
     if (move->isEnpassant()) {
-      int enpassantSquare = move->f() & 7 + move->i() & 56;
+      int capturedSquare = (move->f() & 7) + (move->i() & 56);
       // insert captured pawn at enpassant square onto board
       auto pawn_t = getSide(move->p()) == WHITE ? Pieces::p : Pieces::P;
-      placePiece(pawn_t, enpassantSquare);
+      placePiece(pawn_t, capturedSquare);
     } 
   }
 }
