@@ -3,6 +3,7 @@
 #include "pieces.h"
 #include "movegen.h"
 #include "evaluate.h"
+#include "kingSafety.h"
 #include "search_utils.h"
 #include "search.h"
 #include "utils.h"
@@ -50,64 +51,102 @@ Move pickMove(Board* node, Side side) {
 #else
 int main() {
   #ifdef DEBUG
-    std::cout << "Debug mode enabled" << std::endl;
+    std::cout << "Debug mode enabled" << std::endl << std::endl;
 
-    // put this into the board
-    // R.BQKB.R
-    // PPPPPPPP
-    // ..N..N..
+    // rnbqkb.r
+    // ppppp..p
+    // .....nP.
     // ........
-    // ....p...
     // ........
-    // pppp.ppp
-    // rnbqkbnr
+    // .....Q..
+    // PPPP.PPP
+    // RNB.KBNR
 
-    std::array<std::array<char, 8>, 8> sboard = {{
-      {{'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'}},
-      {{'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'}},
+    std::array<std::array<char, 8>, 8> sBoardPrime = {{
+      {{'r', 'n', 'b', 'q', 'k', 'b', '.', 'r'}},      
+      {{'p', 'p', 'p', 'p', 'p', '.', '.', 'p'}},
+      {{'.', '.', '.', '.', '.', 'n', 'P', '.'}},
       {{'.', '.', '.', '.', '.', '.', '.', '.'}},
       {{'.', '.', '.', '.', '.', '.', '.', '.'}},
-      {{'.', '.', '.', '.', '.', '.', '.', '.'}},
-      {{'.', '.', '.', '.', '.', '.', '.', '.'}},
-      {{'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'}},
-      {{'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}}}};
+      {{'.', '.', '.', '.', '.', 'Q', '.', '.'}},
+      {{'P', 'P', 'P', 'P', '.', 'P', 'P', 'P'}},
+      {{'R', 'N', 'B', '.', 'K', 'B', 'N', 'R'}},
+    }};
 
-    ull bbs[12] = {0ULL};
-    toBitboard(sboard, bbs);
+    ull bbsPrime[12] = {0x0ULL};
+    toBitboard(sBoardPrime, bbsPrime);
 
-    auto board = Board(bbs, {'k', 'q', 'K', 'Q'}, std::nullopt, 59, 3);
-    std::vector<Move> moves = {
-      Move(1, 18, Pieces::piece::N),
-      Move(50, 34, Pieces::piece::p, Flags::DOUBLESTEP),
-      Move(9, 25, Pieces::piece::P, Flags::DOUBLESTEP),
-      Move(57, 42, Pieces::piece::n),
-      Move(25, 33, Pieces::piece::P),
-      Move(48, 32, Pieces::piece::p, Flags::DOUBLESTEP),
-      Move(33, 40, Pieces::piece::P, Flags::ENPASSANT),
-      Move(51, 43, Pieces::piece::p),
-      Move(2, 9, Pieces::piece::B),
-      Move(58, 51, Pieces::piece::b),
-      Move(3, 1, Pieces::piece::K, Flags::CASTLE),
-      Move(59, 57, Pieces::piece::k, Flags::CASTLE),
-    };
+    Board boardPrime(bbsPrime, 0xec3fULL);
+    auto movePrime = pickMove(&boardPrime, Side::BLACK);
+    std::cout << "Board after search (should NOT be mutated)..." << std::endl;
+    boardPrime.printBoard();
+    boardPrime.makeMove(&movePrime);
+    std::cout << "Board after move (" << movePrime.i() << " -> " << movePrime.f() << ", " << movePrime.p() << ")..." << std::endl;
+    boardPrime.printBoard();
+
+    // std::cout << "DEBUGGING PAWN ATTACK..." << std::endl << std::endl;
+    // Board sharkAttack;
+    // int whiteAttackSquares[] = { 23 /* col 7 */, 16 /* col 0 */ };
+    // int blackAttackSquares[] = { 47 /* col 7 */, 40 /* col 0 */ };
+    // for (int sq : whiteAttackSquares) {
+    //   assert(Attack::isPawnAttackingSquare(&sharkAttack, sq, Side::WHITE));
+    // }
+    // for (int sq : blackAttackSquares) {
+    //   assert(Attack::isPawnAttackingSquare(&sharkAttack, sq, Side::BLACK));
+    // }
+    // std::cout << "DONE" << std::endl;
+
+    // std::cout << "DEBUGGING MAKEMOVE/UNDOMOVE..." << std::endl << std::endl;
+    // std::array<std::array<char, 8>, 8> sboard = {{
+    //   {{'r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'}},
+    //   {{'p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'}},
+    //   {{'.', '.', '.', '.', '.', '.', '.', '.'}},
+    //   {{'.', '.', '.', '.', '.', '.', '.', '.'}},
+    //   {{'.', '.', '.', '.', '.', '.', '.', '.'}},
+    //   {{'.', '.', '.', '.', '.', '.', '.', '.'}},
+    //   {{'P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'}},
+    //   {{'R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R'}}}};
+
+    // ull bbs[12] = {0ULL};
+    // toBitboard(sboard, bbs);
+
+    // auto board = Board(bbs, {'k', 'q', 'K', 'Q'}, std::nullopt, 59, 3);
+    // std::vector<Move> moves = {
+    //   Move( 1, 18, Pieces::piece::N),
+    //   Move(50, 34, Pieces::piece::p, Flags::DOUBLESTEP),
+    //   Move( 9, 25, Pieces::piece::P, Flags::DOUBLESTEP),
+    //   Move(57, 42, Pieces::piece::n),
+    //   Move(25, 33, Pieces::piece::P),
+    //   Move(48, 32, Pieces::piece::p, Flags::DOUBLESTEP),
+    //   Move(33, 40, Pieces::piece::P, Flags::ENPASSANT),
+    //   Move(51, 43, Pieces::piece::p),
+    //   Move( 2,  9, Pieces::piece::B),
+    //   Move(58, 51, Pieces::piece::b),
+    //   Move( 3,  1, Pieces::piece::K, Flags::CASTLE),
+    //   Move(59, 57, Pieces::piece::k, Flags::CASTLE),
+    // };
     
-    SearchPath stateHistory;
-    for (int i = 0; i < moves.size(); i++) {
-      stateHistory.push(board.pullState());
-      board.makeMove(&moves[i]);
-      std::cout << "Making Move " << (i + 1) << ": " << moves[i].i() << " -> " << moves[i].f() << std::endl;
-      std::cout << "Updated Board:\n"; board.printBoard();
-      std::cout << "Updated State: 0x" << std::hex << board.pullState() << std::dec << std::endl << std::endl;
-    }
+    // SearchPath stateHistory;
+    // for (int i = 0; i < moves.size(); i++) {
+    //   stateHistory.push(board.pullState());
+    //   board.makeMove(&moves[i]);
+    //   std::cout << "Making Move " << (i + 1) << ": " << moves[i].i() << " -> " << moves[i].f() << std::endl;
+    //   std::cout << "Updated Board:\n"; board.printBoard();
+    //   std::cout << "Updated State: 0x" << std::hex << board.pullState() << std::dec << std::endl << std::endl;
+    // }
 
-    for (int i = moves.size() - 1; i >= 0; i--) {
-      board.undoMove(&moves[i], stateHistory.pop());
-      std::cout << "Undoing Move " << std::dec << (i + 1) << ": " << moves[i].i() << " -> " << moves[i].f() << std::endl;
-      std::cout << "Updated Board:\n"; board.printBoard();
-      std::cout << "Updated State: 0x" << std::hex << board.pullState() << std::endl << std::endl;
-    }
+    // for (int i = moves.size() - 1; i >= 0; i--) {
+    //   board.undoMove(&moves[i], stateHistory.pop());
+    //   std::cout << "Undoing Move " << std::dec << (i + 1) << ": " << moves[i].i() << " -> " << moves[i].f() << std::endl;
+    //   std::cout << "Updated Board:\n"; board.printBoard();
+    //   std::cout << "Updated State: 0x" << std::hex << board.pullState() << std::endl << std::endl;
+    // }
+
+    // std::cout << "DONE" << std::endl;
   #else
     std::cout << "Debug mode disabled" << std::endl;
+
+    const bool _DEBUG = true;
 
     Board testBoard = Board();
     Side currSide = WHITE;
@@ -121,6 +160,9 @@ int main() {
       std::cout << "Move " << std::dec << (++movesSimulated) << ": "; printMove(bestMove);
       std::cout << "State: 0x" << std::hex << testBoard.pullState() << std::endl;
       testBoard.printBoard();
+      if (_DEBUG) {
+        std::cout << "Black bishop bbs: " << std::hex << testBoard.readBB(Pieces::piece::b) << std::dec << std::endl;
+      }
       currSide = (currSide == WHITE) ? BLACK : WHITE;
       bestMove = pickMove(&testBoard, currSide);
     }
