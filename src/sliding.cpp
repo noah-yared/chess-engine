@@ -20,20 +20,18 @@ std::vector<std::unique_ptr<Move>> Sliding::getMovesAlongDirection(
     int dir) {
   std::vector<std::unique_ptr<Move>> moves;
 
-  ull reachableSquares;
   int bitcnt, bitinc = getBitIncrement(dir, true);
 
-  reachableSquares = board->slidingAttacks()[square][dir]; // all squares in direction
+  ull reachableSquares = board->slidingAttacks()[square][dir]; // all squares in attack direction
 
-  int blockingSquare;
-  ull blockingSquares = reachableSquares & board->readCombinedBB(); // occupied squares
+  ull blockingSquares = reachableSquares & board->readCombinedBB(); // occupied squares in attack direction
   
   if (blockingSquares) {
-    blockingSquare = (dir & 1) ? 63 - __builtin_clzll(blockingSquares) : __builtin_ctzll(blockingSquares);
+    int blockingSquare = (dir & 1) ? 63 - __builtin_clzll(blockingSquares) : __builtin_ctzll(blockingSquares);
     if (board->allyBB(side) & (1ULL << blockingSquare)) { // ally is blocking path
       blockingSquare -= bitinc; // cannot move onto ally so move back one square
     }
-    bitcnt = abs((blockingSquare - square) / bitinc);
+    bitcnt = abs(blockingSquare - square) / abs(bitinc);
   } else { // no blocking squares
     bitcnt = __builtin_popcountll(reachableSquares);
   }

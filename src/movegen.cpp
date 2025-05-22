@@ -11,11 +11,16 @@
 
 std::vector<std::unique_ptr<Move>> generateMoves(Board* board, Side side) {
   std::vector<std::unique_ptr<Move>> moves;
+
   // reserve space for max possible moves for given side of board (218)
   moves.reserve(218);
 
-  auto pawnMoves = Pawn::generateMoves(board, side), rookMoves = Rook::generateMoves(board, side), knightMoves = Knight::generateMoves(board, side);
-  auto bishopMoves = Bishop::generateMoves(board, side), queenMoves = Queen::generateMoves(board, side), kingMoves = King::generateMoves(board, side);
+  auto pawnMoves = Pawn::generateMoves(board, side);
+  auto rookMoves = Rook::generateMoves(board, side);
+  auto knightMoves = Knight::generateMoves(board, side);
+  auto bishopMoves = Bishop::generateMoves(board, side);
+  auto queenMoves = Queen::generateMoves(board, side);
+  auto kingMoves = King::generateMoves(board, side);
 
   moves.insert(moves.end(), std::make_move_iterator(pawnMoves.begin()), std::make_move_iterator(pawnMoves.end()));
   moves.insert(moves.end(), std::make_move_iterator(bishopMoves.begin()), std::make_move_iterator(bishopMoves.end()));
