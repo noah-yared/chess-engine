@@ -27,45 +27,45 @@ bool inBounds(int square) {
   return square < 64 && square >= 0;
 }
 
-bool Attack::isPawnAttackingSquare(Board* board, int king, Side attackingSide) {
-  int col = king & 7;
+bool Attack::isPawnAttackingSquare(Board* board, int square, Side attackingSide) {
+  int col = square & 7;
   // bottom right to top left diagonal
-  if (((col != 7) && (attackingSide == WHITE)) || ((col != 0) && (attackingSide == BLACK))) {
+  if (((col != 0) && (attackingSide == WHITE)) || ((col != 7) && (attackingSide == BLACK))) {
     int bitjmp = (attackingSide == WHITE) ? -9 : 9;
-    if (inBounds(king+bitjmp) && (board->readBB(Pieces::type::PAWN, attackingSide) & (1ULL << (king+bitjmp)))) {
+    if (inBounds(square+bitjmp) && (board->readBB(Pieces::type::PAWN, attackingSide) & (1ULL << (square+bitjmp)))) {
       return true;
     }
   }
   // bottom left to top right diagonal
-  if (((col != 7) && (attackingSide == BLACK)) || ((col != 0) && (attackingSide == WHITE)) ) {
+  if (((col != 0) && (attackingSide == BLACK)) || ((col != 7) && (attackingSide == WHITE)) ) {
     int bitjmp = (attackingSide == WHITE) ? -7 : 7;
-    if (inBounds(king+bitjmp) && (board->readBB(Pieces::type::PAWN, attackingSide) & (1ULL << (king+bitjmp)))) {
+    if (inBounds(square+bitjmp) && (board->readBB(Pieces::type::PAWN, attackingSide) & (1ULL << (square+bitjmp)))) {
       return true;
     }
   }
   return false;
 }
 
-bool Attack::isKnightAttackingSquare(Board* board, int king, Side attackingSide) {
-  return (board->knightAttacks()[king] & board->readBB(Pieces::type::KNIGHT, attackingSide)) != 0;  
+bool Attack::isKnightAttackingSquare(Board* board, int square, Side attackingSide) {
+  return (board->knightAttacks()[square] & board->readBB(Pieces::type::KNIGHT, attackingSide)) != 0;  
 }
 
 bool Attack::isKingAttackingSquare(Board* board, int square, Side attackingSide) {
   return (board->kingAttacks()[square] & board->readBB(Pieces::type::KING, attackingSide)) != 0;
 }
 
-bool Attack::isSlidingPieceAttackingSquare(Board* board, int king, Side attackingSide) {
+bool Attack::isSlidingPieceAttackingSquare(Board* board, int square, Side attackingSide) {
   auto queens = board->readBB(Pieces::type::QUEEN, attackingSide);
   auto rooks = board->readBB(Pieces::type::ROOK, attackingSide);
   auto bishops = board->readBB(Pieces::type::BISHOP, attackingSide);
 
   // updward lanes
   for (int d : {WEST, NORTHWEST, NORTH, NORTHEAST}) {
-    auto blockingAllys = board->opposingBB(attackingSide) & board->slidingAttacks()[king][d];
-    auto attackingOpps = board->allyBB(attackingSide) & board->slidingAttacks()[king][d];
+    auto blockingAllys = board->opposingBB(attackingSide) & board->slidingAttacks()[square][d];
+    auto attackingOpps = board->allyBB(attackingSide) & board->slidingAttacks()[square][d];
     int ally_tz = __builtin_ctzll(blockingAllys), opp_tz = __builtin_ctzll(attackingOpps);
     if (ally_tz > opp_tz) {
-      // opp piece can see king unobstructed
+      // opp piece can see square unobstructed
       if ((queens & (1ULL << opp_tz)) || ((Directions::isDiagonal(d) ? bishops : rooks) & (1ULL << opp_tz))) {
         return true;
       }
@@ -74,10 +74,10 @@ bool Attack::isSlidingPieceAttackingSquare(Board* board, int king, Side attackin
 
   // downward lanes
   for (int d : {EAST, SOUTHEAST, SOUTH, SOUTHWEST}) {
-    auto blockingAllys = board->opposingBB(attackingSide) & board->slidingAttacks()[king][d];
-    auto attackingOpps = board->allyBB(attackingSide) & board->slidingAttacks()[king][d];
+    auto blockingAllys = board->opposingBB(attackingSide) & board->slidingAttacks()[square][d];
+    auto attackingOpps = board->allyBB(attackingSide) & board->slidingAttacks()[square][d];
     if (attackingOpps > blockingAllys) {
-      // opp piece can see king unobstructed
+      // opp piece can see square unobstructed
       int opp_lz = __builtin_clzll(attackingOpps);
       if ((queens & (1ULL << (63 - opp_lz))) || ((Directions::isDiagonal(d) ? bishops : rooks) & (1ULL << (63 - opp_lz)))) {
         return true;
