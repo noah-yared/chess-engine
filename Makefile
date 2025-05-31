@@ -1,4 +1,5 @@
 CXX := g++
+VERSION := c++20
 IDIR := include
 TEST_IDIR := tests/boards/pieceBoards
 ODIR := build
@@ -22,7 +23,7 @@ TESTSOURCES := $(wildcard $(TESTDIR)/*.cpp)
 TESTOBJECTS := $(TESTSOURCES:$(TESTDIR)/%.cpp=$(ODIR)/test_%.o)
 
 # LIBS := $(LIBDIR)/Crow
-CXXFLAGS := -std=c++17 -I$(IDIR) -Wall
+CXXFLAGS := -std=$(VERSION) -I$(IDIR) -Wall
 DEPFLAGS = -MT $@ -MMD -MP -MF $(DEPDIR)/$*.d
 
 $(TARGET): $(OBJECTS)
@@ -58,14 +59,14 @@ include $(wildcard $(DEPFILES))
 tests: $(OBJECTS) $(TESTOBJECTS)
 	@echo "Running tests"
 	# add in new include directory 
-	@$(CXX) -o $(ODIR)/$(TEST_TARGET) $^ $(CXXFLAGS) -I$(TEST_IDIR) -O0 -g
+	@$(CXX) -o $(ODIR)/$(TEST_TARGET) $^ $(CXXFLAGS) -I$(TEST_IDIR) -O0 -g -DTEST
 	@./$(ODIR)/$(TEST_TARGET)
 
 # get debugger info (use -O0)
 .PHONY: debug
 debug: $(OBJECTS)
 	@echo "Building in debug mode..."
-	@$(MAKE) CXXFLAGS="$(CXXFLAGS) -g -O0"
+	@$(MAKE) CXXFLAGS="$(CXXFLAGS) -g -O0 -DDEBUG"
 	@./$(ODIR)/$(TARGET)
 
 # get google perf test data (use -O0)
