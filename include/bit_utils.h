@@ -87,7 +87,7 @@ private:
   static constexpr int NumRanks = 8;
 
   // sfamt > 0: shift left by sfamt, sfamt < 0: shift right by -sfamt
-  static constexpr inline u64 sft(u64 bb, int sfamt) { return sfamt > 0 ? bb << sfamt : bb >> sfamt; }
+  static constexpr inline u64 sft(u64 bb, int sfamt) { return sfamt > 0 ? bb << sfamt : bb >> -sfamt; }
 
   template<char file> requires IsFile<file>
   static constexpr u64 fileMask() { return LeftEdgeMask >> (file - 'a'); }
