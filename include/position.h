@@ -34,11 +34,15 @@ public:
   // Constructors        //
   /////////////////////////
   Position() : bitboards_{}, state_{}, hash_{ZobristHasher<RNG>::initialZobristHash()}, moves_{} {};
-  explicit Position(std::string& fen) :
-      bitboards_{fen, FromFEN{}},
-      state_{fen},
-      hash_{ZobristHasher<RNG>::computeZobristHash(bitboards_, state_)},
-      moves_{} {};
+  explicit Position(const std::string& fen) : bitboards_{fen, FromFEN{}}, state_{fen},
+      hash_{ZobristHasher<RNG>::computeZobristHash(bitboards_, state_)}, moves_{} {};
+  
+  /////////////////////////
+  // Factory Methods     //
+  /////////////////////////
+  static Position fromStartingPosition() {
+    return Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  }
   
   static Position fromAscii(const std::string& asciiBoard, const std::string turn = "w",
       const std::string castlingRights = "-", const std::string enpassant = "-") {
@@ -46,6 +50,24 @@ public:
       Bitboards(asciiBoard, FromAsciiBoard{}),
       BoardState(turn, castlingRights, enpassant)
     };
+  }
+
+  /////////////////////////
+  // Position Loading    //
+  /////////////////////////
+  void loadFEN(const std::string& fen) {
+    bitboards_ = Bitboards(fen, FromFEN{});
+    state_ = BoardState(fen);
+    hash_ = ZobristHasher<RNG>::computeZobristHash(bitboards_, state_);
+    moves_.clear();
+  }
+  
+  void loadAsciiBoard(const std::string& asciiBoard, const std::string turn = "w",
+      const std::string castlingRights = "-", const std::string enpassant = "-") {
+    bitboards_ = Bitboards(asciiBoard, FromAsciiBoard{});
+    state_ = BoardState(turn, castlingRights, enpassant);
+    hash_ = ZobristHasher<RNG>::computeZobristHash(bitboards_, state_);
+    moves_.clear();
   }
 
   /////////////////////////
@@ -74,24 +96,6 @@ public:
   }
 
   const MoveList& legalMoves() const;
-
-  /////////////////////////
-  // Position Loading    //
-  /////////////////////////
-  void loadFEN(const std::string& fen) {
-    bitboards_ = Bitboards(fen, FromFEN{});
-    state_ = BoardState(fen);
-    hash_ = ZobristHasher<RNG>::computeZobristHash(bitboards_, state_);
-    moves_.clear();
-  }
-  
-  void loadAsciiBoard(const std::string& asciiBoard, const std::string turn = "w",
-      const std::string castlingRights = "-", const std::string enpassant = "-") {
-    bitboards_ = Bitboards(asciiBoard, FromAsciiBoard{});
-    state_ = BoardState(turn, castlingRights, enpassant);
-    hash_ = ZobristHasher<RNG>::computeZobristHash(bitboards_, state_);
-    moves_.clear();
-  }
 
   /////////////////////////
   // Move Validation     //
