@@ -1,0 +1,90 @@
+#pragma once
+
+#include <algorithm>
+#include <optional>
+#include <random>
+#include <vector>
+
+#include "bitboards.h"
+#include "board_state.h"
+#include "delta.h"
+#include "move.h"
+#include "zobrist.h"
+
+template<typename RNG>
+class ZobristHasher {
+public:
+  // explicit ZobristHasher(const Zobrist<RNG>& zobrist): zobrist_{zobrist} {};
+
+  static constexpr u64 initialZobristHash() {
+    u64 hash = 0ull;
+    // apply piece keys
+    for (int bbKey = 0; bbKey < NUM_BITBOARDS; bbKey++)
+      for (int square = 0; square < SQUARES; square++)
+        if (STARTING_BBS[bbKey] & (1ULL << square))
+          hash ^= zobrist_.pieceKeys[bbKey][square];
+    // apply castling keys
+    hash ^= zobrist_.castlingKeys[STARTING_CASTLE_BITS];
+    return hash;
+  }
+
+  static u64 computeZobristHash(const Bitboards& bitboards, const BoardState state) {
+    u64 hash = 0ull;
+    // apply piece keys
+    for (int bbKey = 0; bbKey < NUM_BITBOARDS; bbKey++)
+      for (int square = 0; square < SQUARES; square++)
+        if (bitboards.bb(bbKey) & (1ULL << square))
+          hash ^= zobrist_.pieceKeys[bbKey][square];
+    // apply castling keys
+    hash ^= zobrist_.castlingKeys[state.castlingBits()];
+    // apply enpassant keys
+    if (state.getEnpassantSquare())
+      hash ^= zobrist_.enpassantKeys[*state.getEnpassantSquare() % RANKS];
+    // apply turn key
+    if (state.blackToMove())
+      hash ^= zobrist_.turnKey;
+    return hash;
+  }
+
+  template<MoveType mType>
+  static u64 getHashUpdateMask(const Move<mType> move, const std::vector<Delta>& deltas, const std::optional<int> maybePreviousEnpassantSq, int oldCastlingBits, int newCastlingBits) {
+    return pieceSquareDeltasMask(deltas)
+       xor castlingPrivilegesMask<mType>(oldCastlingBits, newCastlingBits)
+       xor enpassantSquareMask<mType>(move, maybePreviousEnpassantSq)
+       xor turnMask<mType>();
+  }
+
+private:
+  static inline Zobrist<RNG> zobrist_{};
+
+  static inline u64 pieceSquareDeltasMask(const std::vector<Delta>& deltas) {
+    u64 mask = 0ULL;
+    for (const auto [bbKey, square, _] : deltas)
+      mask ^= zobrist_.pieceKeys[bbKey][square]; 
+    return mask;
+  }
+
+  template<MoveType mType>
+  static inline u64 enpassantSquareMask(const Move<mType> move, std::optional<int> maybePreviousEnpassantSq) {
+    return zobrist_.enpassantKeys[maybePreviousEnpassantSq.value_or(0) % RANKS]; // clear previous enpassant square (note: x ^ 0 == x)
+  }
+  template<>
+  static inline u64 enpassantSquareMask<MoveType::DoublePawnPush>(const Move<MoveType::DoublePawnPush> move, std::optional<int> maybePreviousEnpassantSq) {
+    return zobrist_.enpassantKeys[maybePreviousEnpassantSq.value_or(0) % RANKS]
+       xor zobrist_.enpassantKeys[((move.start() + move.end()) / 2) % RANKS]; // add hash corresponding to enpassant square on certain file
+  }
+
+  template<MoveType mType>
+  static inline u64 castlingPrivilegesMask(int oldCastlingBits, int newCastlingBits) {
+    return 0ULL;
+  }
+  template<>
+  static inline u64 castlingPrivilegesMask<MoveType::Castle>(int oldCastlingBits, int newCastlingBits) {
+    return zobrist_.castlingKeys[oldCastlingBits] ^ zobrist_.castlingKeys[newCastlingBits];
+  }
+
+  template<MoveType mType>
+  static inline u64 turnMask() {
+    return zobrist_.turnKey;
+  }
+};

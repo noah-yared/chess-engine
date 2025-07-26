@@ -1,0 +1,13 @@
+.vscode/
+notes.txt
+.clang-tidy
+.clangd
+build/
+.idea/
+.DS_Store
+**/.git
+venv/
+**/data/
+**/logs/
+**/__pycache__/
+tests/hello_test.cpp
