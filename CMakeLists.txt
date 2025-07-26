@@ -31,7 +31,7 @@ target_include_directories(engine PUBLIC ${CMAKE_SOURCE_DIR}/include PRIVATE ${C
 enable_testing()
 
 add_executable(engine_tests # declare test binary
-    tests/square_attack_detection_test.cpp
+    tests/check_detection_test.cpp
     tests/move_apply_test.cpp
     tests/move_undo_test.cpp
     tests/move_generation_test.cpp)
