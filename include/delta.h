@@ -5,29 +5,12 @@
 
 /*
  * store following info for piece square updates:
- * @id: piece bitboard index
+ * @key: piece bitboard index
  * @square: bit index of piece bitboard 
- * @isRemoval: true indicates piece removed, false indicates placement
  */
 struct Delta {
-  enum Action { ADDED, REMOVED };
   int key, square;
-  Action change;
 
-  static Delta Place(int key, int square) {
-    return {
-      .key = key,
-      .square = square,
-      .change = ADDED,
-    };
-  }
-
-  static Delta Remove(int key, int square) {
-    return {
-      .key = key,
-      .square = square,
-      .change = REMOVED,
-    };
-  }
-
+  static Delta Place(int key, int square) { return { key, square }; }
+  static Delta Remove(int key, int square) { return { key, square }; }
 };

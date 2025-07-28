@@ -5,6 +5,7 @@
 #include <cassert>
 #include <cctype>
 #include <iomanip>
+#include <iostream>
 #include <iterator>
 #include <numeric>
 #include <sstream>
@@ -55,7 +56,7 @@ class Bitboards {
       if (iswspace(c))
         continue;
       if (auto pos = pieceString.find(c); pos != std::string::npos)
-        placePiece(static_cast<int>(pos), bit); 
+        togglePieceSquare(static_cast<int>(pos), bit);
       --bit;
     }
     if (bit != -1)
@@ -68,7 +69,7 @@ class Bitboards {
     for (auto c : fenPieces) {
       if (c == '/') continue;
       if (isdigit(c)) bit -= (c - '0');
-      else placePiece(static_cast<int>(pieceString.find(c)), bit--);
+      else togglePieceSquare(static_cast<int>(pieceString.find(c)), bit--);
     }
   };
   explicit Bitboards(const std::array<u64, NUM_BITBOARDS>& bbs) : bbs_{bbs} {
@@ -90,28 +91,16 @@ class Bitboards {
     return NUM_PIECE_TYPES * static_cast<int>(c) + static_cast<int>(t);
   }
 
-  void removePiece(PieceType t, Color c, int square) noexcept {
-    bbs_[pieceToKey(t, c)] &= ~(1ULL << square);
-    if (c == Color::WHITE) whiteBB_ &= ~(1ULL << square);
-    else blackBB_ &= ~(1ULL << square);
+  void togglePieceSquare(PieceType t, Color c, int square) noexcept {
+    togglePieceSquare(pieceToKey(t, c), square);
   }
 
-  void removePiece(int key, int square) noexcept {
-    bbs_[key] &= ~(1ULL << square);
-    if (keyToColor(key) == Color::WHITE) whiteBB_ &= ~(1ULL << square);
-    else blackBB_ &= ~(1ULL << square);
-  }
-
-  void placePiece(PieceType t, Color c, int square) noexcept {
-    bbs_[pieceToKey(t, c)] |= 1ULL << square;
-    if (c == Color::WHITE) whiteBB_ |= 1ULL << square;
-    else blackBB_ |= 1ULL << square;
-  }
-
-  void placePiece(int index, int square) noexcept {
-    bbs_[index] |= 1ULL << square;
-    if (keyToColor(index) == Color::WHITE) whiteBB_ |= 1ULL << square;
-    else blackBB_ |= 1ULL << square;
+  void togglePieceSquare(int key, int square) noexcept {
+    bbs_[key] ^= 1ULL << square;
+    if (keyToColor(key) == Color::WHITE) 
+      whiteBB_ ^= 1ULL << square;
+    else
+      blackBB_ ^= 1ULL << square;
   }
 
   // Iterators for all bitboards
@@ -162,9 +151,18 @@ class Bitboards {
   [[nodiscard]] constexpr bool operator!=(const Bitboards& other) const noexcept { return bbs_ != other.bbs_; }
 
   [[nodiscard]] bool isConsistent() const noexcept {
+    std::string pieceString = "prnbqkPRNBQK";
     if (whiteBB_ & blackBB_) return false;
     if (combine(wStart(), wEnd()) != whiteBB_) return false;
     if (combine(bStart(), bEnd()) != blackBB_) return false;
+    for (int i = 0; i < NUM_BITBOARDS; ++i) {
+      for (int j = i + 1; j < NUM_BITBOARDS; ++j) {
+        if (bbs_[i] & bbs_[j]) {
+          std::cout << pieceString[i] << "'s bitboard and " << pieceString[j] << "'s bitboard overlap!" << std::endl;
+          return false;
+        }
+      }
+    }
     return true;
   }
 

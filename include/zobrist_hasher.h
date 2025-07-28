@@ -59,19 +59,19 @@ private:
 
   static inline u64 pieceSquareDeltasMask(const std::vector<Delta>& deltas) {
     u64 mask = 0ULL;
-    for (const auto [bbKey, square, _] : deltas)
+    for (const auto [bbKey, square] : deltas)
       mask ^= zobrist_.pieceKeys[bbKey][square]; 
     return mask;
   }
 
   template<MoveType mType>
   static inline u64 enpassantSquareMask(const Move<mType> move, std::optional<int> maybePreviousEnpassantSq) {
-    return zobrist_.enpassantKeys[maybePreviousEnpassantSq.value_or(0) % RANKS]; // clear previous enpassant square (note: x ^ 0 == x)
+    return maybePreviousEnpassantSq ? zobrist_.enpassantKeys[*maybePreviousEnpassantSq % RANKS] : 0ULL;
   }
   template<>
   static inline u64 enpassantSquareMask<MoveType::DoublePawnPush>(const Move<MoveType::DoublePawnPush> move, std::optional<int> maybePreviousEnpassantSq) {
-    return zobrist_.enpassantKeys[maybePreviousEnpassantSq.value_or(0) % RANKS]
-       xor zobrist_.enpassantKeys[((move.start() + move.end()) / 2) % RANKS]; // add hash corresponding to enpassant square on certain file
+    return (maybePreviousEnpassantSq ? zobrist_.enpassantKeys[*maybePreviousEnpassantSq % RANKS] : 0ULL)
+       xor zobrist_.enpassantKeys[((move.start() + move.end()) / 2) % RANKS];
   }
 
   template<MoveType mType>

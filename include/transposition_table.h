@@ -278,26 +278,27 @@ public:
 
 class TranspositionTable {
 private:
-  static constexpr u64 HASH_SIZE = (1ULL << 20) + 7;
+  static constexpr size_t DEFAULT_HASH_SIZE = (1UL << 20) + 7;
+
   std::vector<PackedTTEntry> table_;
+  size_t size_;
 
 public:
-  TranspositionTable() : table_(HASH_SIZE) {}
+  explicit TranspositionTable(size_t size = DEFAULT_HASH_SIZE) : table_{size}, size_{size} {}
 
   void store(u64 key, int score, int depth, Bound bound, std::pair<int,int> bestMove) {
-    size_t index = key % HASH_SIZE;
+    size_t index = key % size_;
     table_[index] = PackedTTEntry{key, score, depth, bound, bestMove};
   }
 
   std::optional<PackedTTEntry*> probe(u64 key) {
-    size_t index = key % HASH_SIZE;
+    size_t index = key % size_;
     auto& entry = table_[index];
     return (entry.isOccupied() && entry.hasMatchingKey(key)) ? std::optional<PackedTTEntry*>(&entry) : std::nullopt;
   }
 
   void clear() {
-    for_each(table_.begin(), table_.end(), [](auto& entry) { 
+    for (auto& entry : table_)
       entry.clear();
-    });
   }
 };

@@ -162,6 +162,7 @@ public:
   void clearMoveBuffer() const { moves_.clear(); }
   std::string stringifyBitboards() const { return bitboards_.toString(); }
   std::string stringifyBoardState() const { return state_.toString(); }
+  bool areBitboardsConsistent() const { return bitboards_.isConsistent(); }
 
   // Useful edge detection helpers
   [[nodiscard]] static bool isSquareOnLeftEdge(int square) { return (square ^ 7) == 0; }
@@ -170,7 +171,7 @@ public:
   /////////////////////////
   // Operators           //
   /////////////////////////
-  bool operator==(const Position& other) const { return bitboards_ == other.bitboards_ && state_ == other.state_; } 
+  bool operator==(const Position& other) const { return bitboards_ == other.bitboards_ && state_ == other.state_ && hash_ == other.hash_; } 
   bool operator!=(const Position& other) const { return ! (operator==(other)); }
 
 private:
@@ -231,24 +232,14 @@ private:
   /////////////////////////
   template<MoveType mType>
   void updateBitboards(const Move<mType> move, const std::vector<Delta>& deltas) {
-    for (const auto delta : deltas) {
-      if (delta.change == Delta::ADDED) {
-        bitboards_.placePiece(delta.key, delta.square);
-      } else {
-        bitboards_.removePiece(delta.key, delta.square);
-      }
-    }
+    for (const auto [key, square] : deltas)
+      bitboards_.togglePieceSquare(key, square);
   }
   
   template<MoveType mType>
   void revertBitboards(const Move<mType> move) {
-    for (const auto delta : pieceSquareDeltas<mType>(move)) {
-      if (delta.change == Delta::ADDED) { // remove to undo added piece
-        bitboards_.removePiece(delta.key, delta.square);
-      } else { // add to undo removed piece
-        bitboards_.placePiece(delta.key, delta.square);
-      }
-    }
+    for (const auto [key, square] : pieceSquareDeltas<mType>(move))
+      bitboards_.togglePieceSquare(key, square);
   }
 
   template<MoveType mType>
@@ -262,7 +253,7 @@ private:
   void updateHash(const Move<mType> move, const std::vector<Delta>& deltas, const BoardState prevState,
       const BoardState newState) {
     hash_ ^= ZobristHasher<RNG>::getHashUpdateMask<mType>(move, deltas, prevState.getEnpassantSquare(),
-        prevState.castlingBits(), newState.castlingBits()); 
+        prevState.castlingBits(), newState.castlingBits());
   }
 
   /////////////////////////
@@ -423,7 +414,8 @@ private:
 };
 
 inline std::ostream& operator<<(std::ostream& os, const Position& pos) {
-  os << pos.stringifyBoardState() << '\n'
+  os << "Position:\n"
+     << pos.stringifyBoardState() << '\n'
      << std::hex << pos.getHash() << std::dec << '\n'
      << pos.stringifyBitboards() << '\n';
   return os;

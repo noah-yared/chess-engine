@@ -15,13 +15,13 @@ inline std::vector<Delta> pieceSquareDeltas(const Move<mType> move) { return {};
 
 template<>
 inline std::vector<Delta> pieceSquareDeltas<MoveType::Normal>(const Move<MoveType::Normal> move) {
+  auto maybeCapturedKey = move.capturedKey();
   std::vector<Delta> deltas = {
     Delta::Remove( move.movedKey(), move.start() ),
     Delta::Place ( move.movedKey(), move.end()   ),
   };
-  if (auto maybeCapturedKey = move.capturedKey(); maybeCapturedKey) {
+  if (maybeCapturedKey)
     deltas.push_back(Delta::Remove( *maybeCapturedKey, move.end() ));
-  }
   return deltas;
 }
 
@@ -36,21 +36,21 @@ inline std::vector<Delta> pieceSquareDeltas<MoveType::Enpassant>(const Move<Move
 
 template<>
 inline std::vector<Delta> pieceSquareDeltas<MoveType::Promotion>(const Move<MoveType::Promotion> move) {
+  auto maybeCapturedKey = move.capturedKey();
   std::vector<Delta> deltas = {
     Delta::Remove( move.movedKey(),     move.start() ),
     Delta::Place ( move.promotionKey(), move.end()   ),
   };
-  if (auto maybeCapturedKey = move.capturedKey(); maybeCapturedKey) {
+  if (maybeCapturedKey)
     deltas.push_back(Delta::Remove( *maybeCapturedKey, move.end() ));
-  }
   return deltas;
 }
 
 template<>
 inline std::vector<Delta> pieceSquareDeltas<MoveType::Castle>(const Move<MoveType::Castle> move) {
   return {
-    Delta::Remove( move.movedKey(),       move.start()          ),
-    Delta::Place ( move.movedKey(),       move.end()            ),
+    Delta::Remove( move.movedKey(),       move.start()            ),
+    Delta::Place ( move.movedKey(),       move.end()              ),
     Delta::Remove( move.castledRookKey(), move.castledRookStart() ),
     Delta::Place ( move.castledRookKey(), move.castledRookEnd()   ),
   };
