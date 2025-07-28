@@ -1,6 +1,6 @@
 #pragma once
 
-enum Square {
+enum Square : unsigned int {
   H1, G1, F1, E1, D1, C1, B1, A1,
   H2, G2, F2, E2, D2, C2, B2, A2,
   H3, G3, F3, E3, D3, C3, B3, A3,
