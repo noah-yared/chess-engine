@@ -7,13 +7,13 @@
 #include "platform.h"
 
 
-template<typename StateType>
+template<typename StateType, size_t MaxDepth=16>
 class StateStack {
-  std::array<StateType, SEARCH_DEPTH+1> stack_;
+  std::array<StateType, MaxDepth> stack_;
   size_t ply_;
 
  public:
-  StateStack(): ply_{} {};
+  StateStack(): ply_{0} {};
 
   // observers
   [[nodiscard]] inline bool isEmpty() const { return ply_ == 0; }
