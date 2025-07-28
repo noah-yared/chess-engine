@@ -147,8 +147,7 @@ struct Move<MoveType::Castle> : public MoveBase<MoveType::Castle> {
 
   // branchless optimization
   [[nodiscard]] int castledRookStart() const {
-    int queenSide = start() > end();
-    int blackCastle = side() == Color::BLACK;
+    int queenSide = start() < end(), blackCastle = side() == Color::BLACK;
     return 7 * queenSide + 56 * blackCastle;
   }
   [[nodiscard]] int castledRookEnd() const { return (start() + end()) / 2; }
