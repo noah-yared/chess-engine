@@ -22,6 +22,9 @@ private:
   StateStack<BoardStateSnapshot> undoStack_;
   TranspositionTable tt_;
 
+  // private constructor for testing
+  explicit SearchEngine(const Position& position, size_t ttSize) : position_{position}, undoStack_{}, tt_{ttSize} {};
+
   struct Line {
     std::optional<MoveVariant> move = std::nullopt;
     int score;
@@ -40,7 +43,7 @@ private:
     );
   }
 
-  [[nodiscard]] static Bound getBound (int score, int alpha, int beta) {
+  [[nodiscard]] static Bound getBound(int score, int alpha, int beta) {
     if (score < alpha) return Bound::UPPER;
     if (score > beta) return Bound::LOWER;
     return Bound::EXACT;
@@ -94,7 +97,16 @@ private:
 
 public:
   SearchEngine() : position_{}, undoStack_{}, tt_{} {};
-  explicit SearchEngine(std::string& fen) : position_{fen}, undoStack_{}, tt_{} {};
+  explicit SearchEngine(const std::string& fen) : position_{fen}, undoStack_{}, tt_{} {};
+
+  // Factory method for testing - creates engine without transposition table allocation
+  [[nodiscard]] static SearchEngine withEmptyTTForTesting(const Position& position) {
+    return SearchEngine(position, 0);
+  }
+
+  // prevent copying (very memory intensive)
+  SearchEngine(const SearchEngine&) = delete; 
+  SearchEngine operator=(const SearchEngine&) = delete;
 
   void advance(MoveVariant variant) {
     undoStack_.push(position_.getStateSnapshot());
@@ -119,6 +131,8 @@ public:
     advance(*maybeMove);
     return *maybeMove;
   }
+
+  const Position& getPosition() const { return position_; }
 
   void dumpPosition() const {
     std::cout << position_ << '\n';
