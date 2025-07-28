@@ -105,7 +105,7 @@ public:
       if (isCastlingRightAvailable(right))
         ss << right;
     if (ss.str().empty())
-      ss << " -";
+      ss << "-";
     ss << (blackToMove() ? " b " : " w ");
     ss << (existsEnpassantSq() ? indexToAlgebraicNotation(*getEnpassantSquare()) : "-");
     return ss.str();  
@@ -145,7 +145,10 @@ public:
   [[nodiscard]] u32 extract() const { return state_; }
   void revert(u32 state) { state_ = state; }
 
-  bool operator==(const BoardState& other) const { return state_ == other.state_; }
-  bool operator!=(const BoardState& other) const { return state_ != other.state_; }
+  bool operator==(const BoardState& other) const {
+    return castlingBits() == other.castlingBits() && getTurn() == other.getTurn()
+        && getEnpassantSquare().value_or(0) == other.getEnpassantSquare().value_or(0);
+  }
+  bool operator!=(const BoardState& other) const { return ! (operator==(other)); }
 };
 
