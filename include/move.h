@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <sstream>
+#include <type_traits>
 #include <unordered_map>
 
 #include "bitboards.h"
@@ -61,7 +62,20 @@ public:
   [[nodiscard]] std::string uci() const {
     std::stringstream ss;
     ss << getAlgebraicNotation(start_) << getAlgebraicNotation(end_);
+    if (mType == MoveType::Promotion) ss << 'q'; // always promote to queen
     return ss.str();
+  }
+
+  // operator overloads
+  template<MoveType OtherMoveType>
+  bool operator==(const MoveBase<OtherMoveType> other) const {
+    return start() == other.start() && end() == other.end()
+        && moved() == other.moved() && captured() == other.captured()
+        && mType == OtherMoveType;
+  }
+  template<MoveType OtherMoveType>
+  bool operator!=(const MoveBase<OtherMoveType> other) const {
+    return !operator==(other);
   }
 
   [[nodiscard]] static std::string getAlgebraicNotation(int square) {
@@ -95,16 +109,16 @@ public:
       return (side() == Color::WHITE ? pieceToChar.at(piece) 
                                      : std::tolower(pieceToChar.at(piece)));
     };
-
     std::cout << getPieceChar(moved()) << ": " << getStringNotation(start_) << " to " << getStringNotation(end_);
-    switch (mType) {
+    switch (type) {
       // case MoveType::Capture: std::cout << ", x"; break; //<< getPieceChar(captured()); break;
-      case MoveType::Enpassant: std::cout << ", e.p."; break;
-      case MoveType::Promotion: std::cout << ", =Q"; break;
-      case MoveType::DoublePawnPush: std::cout << ", P.P"; break;
-      case MoveType::Castle: std::cout << ", " << (side() == Color::WHITE ? "O-O-O" : "O-O"); break;
+      case MoveType::Enpassant: std::cout << " | e.p."; break;
+      case MoveType::Promotion: std::cout << " | =Q"; break;
+      case MoveType::DoublePawnPush: std::cout << " | P.P"; break;
+      case MoveType::Castle: std::cout << " | " << (side() == Color::WHITE ? "O-O-O" : "O-O"); break;
       default: break; // normal/quiet (may include capture)
     };
+    std::cout << '\n';
   }
 };
 
@@ -181,3 +195,13 @@ struct Move<MoveType::DoublePawnPush> : public MoveBase<MoveType::DoublePawnPush
   [[nodiscard]] int enpassantSquare() const { return (start() + end()) / 2; }
   [[nodiscard]] int enpassantKey() const { return Bitboards::pieceToKey(PieceType::PAWN, side()); }
 };
+
+// hash function for move
+namespace std {
+  template<MoveType mType>
+  struct hash<Move<mType>> {
+    size_t operator()(const Move<mType> move) const {
+      return move.start() ^ move.end() ^ std::hash<PieceType>()(move.moved()) << 2 ^ std::hash<PieceType>()(move.captured());
+    }
+  };
+}
