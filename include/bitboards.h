@@ -170,6 +170,7 @@ class Bitboards {
     std::string pieceString = "prnbqkPRNBQK";
     std::stringstream ss;
     for (int r = 7; r >= 0; --r) {
+      ss << "    "; // indent each rank
       for (int c = 7; c >= 0; --c) {
         int sq = r * FILES + c;
         if (auto pType = getPieceType(sq); pType != PieceType::NONE) {
