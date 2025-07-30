@@ -1,8 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "engine.h"
 #include "position.h"
-#include "test_utils.h"
 
 TEST(CheckDetectionTest, HandlesUnthreatenedKing) {
   // no pins, no checks
