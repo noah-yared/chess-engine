@@ -12,7 +12,7 @@
 #include "board_utils.h"
 #include "pieces.h"
 #include "platform.h"
-#include "traits.h"
+#include "chess_traits.h"
 
 class BoardState {
   u32 state_; // castlingPrivs + existsEnpassantSq + enpassantSq (junk if existsEnpassantSq is 0) + turn (0 -> white to move, 1 -> black to move)

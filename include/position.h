@@ -14,6 +14,7 @@
 #include "board_state.h"
 #include "board_state_snapshot.h"
 #include "board_utils.h"
+#include "chess_traits.h"
 #include "constants.h"
 #include "directions.h"
 #include "evaluate.h"
