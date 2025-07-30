@@ -165,8 +165,8 @@ public:
   bool areBitboardsConsistent() const { return bitboards_.isConsistent(); }
 
   // Useful edge detection helpers
-  [[nodiscard]] static bool isSquareOnLeftEdge(int square) { return (square ^ 7) == 0; }
-  [[nodiscard]] static bool isSquareOnRightEdge(int square) { return (square ^ 7) == 7; }
+  [[nodiscard]] static bool isSquareOnLeftEdge(int square) { return (square & 7) == 7; }
+  [[nodiscard]] static bool isSquareOnRightEdge(int square) { return (square & 7) == 0; }
 
   /////////////////////////
   // Operators           //
