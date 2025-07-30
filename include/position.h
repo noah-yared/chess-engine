@@ -474,9 +474,9 @@ template<>
 inline void Position::pushLegalMoves<MoveType::DoublePawnPush, PieceType::PAWN>() const {
   auto pushMoves = [&]<Color color> {
     BitUtils::bitsForEach<>(
-        Position::stepBitboard<forward<color>>(singlePawnPushTargets(color), [](u64 bb) {
+        clearOccupiedSquares(Position::stepBitboard<forward<color>>(singlePawnPushTargets(color), [](u64 bb) {
           return Position::filterRankFromBitboard<pawnRank<color> + rankDelta<color>>(bb);
-        }), [&](int dest) {
+        })), [&](int dest) {
           pushIfSafe(MoveFactory::createMove<MoveType::DoublePawnPush, PieceType::PAWN>(
               dest - 2 * Directions::sfamt(forward<color>), dest, *this));
         });
