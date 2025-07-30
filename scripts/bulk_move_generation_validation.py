@@ -11,15 +11,15 @@ from typing import Generator
 import chess
 
 # Get abs path to directory containing script
-SCRIPT_DIR = Path(__file__).resolve().parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 # Size of fen test batch
-DEFAULT_FEN_TEST_BATCH_SIZE = 1_000
+DEFAULT_FEN_TEST_BATCH_SIZE = 10_000
 
 # define paths relative to directory
 ENGINE_BUILD_PATH = SCRIPT_DIR.parent / "build"
 ENGINE_EXECUTABLE = ENGINE_BUILD_PATH / "engine"
-FEN_DATA_PATH = SCRIPT_DIR.parent / "tests" / "data" / "fen_data.txt"
+FEN_DATA_PATH = SCRIPT_DIR / "data" / "fen_data.txt"
 
 LOG_DIR = SCRIPT_DIR / "logs"
 
@@ -140,7 +140,8 @@ def expected_generated_moves(fen: str):
     try:
         board = chess.Board(fen)
         return {
-            move.uci()[:4] for move in board.legal_moves
+            move.uci() for move in board.legal_moves
+            if move.uci()[-1] not in 'rnb'
         }
     except ValueError as e:
         print_to_err_log(f"Warning: Invalid FEN, got error {e}")
