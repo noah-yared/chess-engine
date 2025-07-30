@@ -9,10 +9,11 @@
 #include <type_traits>
 #include <variant>
 
-#include "board_state.h"
-#include "board_state_snapshot.h"
 #include "bitboards.h"
 #include "bit_utils.h"
+#include "board_state.h"
+#include "board_state_snapshot.h"
+#include "board_utils.h"
 #include "constants.h"
 #include "directions.h"
 #include "evaluate.h"
@@ -96,7 +97,39 @@ public:
     return moves_.push(candidateMove), true;
   }
 
+  /////////////////////////
+  // Move Generation     //
+  /////////////////////////
   const MoveList& legalMoves() const;
+
+  /////////////////////////
+  // Move Factory        //
+  /////////////////////////
+  // for uci parsing
+  template<MoveType mType>
+  Move<mType> createMove(int start, int end) const noexcept {
+    if constexpr(! CanCapture<mType>)
+      return Move<mType>(start, end, sideToMove(), getPieceOccupyingSquare(start));
+    else {
+      auto capturedPiece = getPieceOccupyingSquare(end, opposite(sideToMove()));
+      return capturedPiece != PieceType::NONE
+          ? Move<mType>(start, end, sideToMove(), getPieceOccupyingSquare(start), capturedPiece)
+          : Move<mType>(start, end, sideToMove(), getPieceOccupyingSquare(start));
+    }
+  }
+
+  // for move generation (where we know the piece type at compile time)
+  template<MoveType mType, PieceType pType>
+  Move<mType> createMove(int start, int end) const noexcept {
+    if constexpr(! CanCapture<mType>)
+      return Move<mType>(start, end, sideToMove(), pType);
+    else {
+      auto capturedPiece = getPieceOccupyingSquare(end, opposite(sideToMove()));
+      return capturedPiece != PieceType::NONE
+          ? Move<mType>(start, end, sideToMove(), pType, capturedPiece)
+          : Move<mType>(start, end, sideToMove(), pType);
+    }
+  }
 
   /////////////////////////
   // Move Validation     //
@@ -209,21 +242,6 @@ private:
           BitUtils::bitsForEach<>(clearAllySquares(attackedSquares<pType>(start, sideToMove()), sideToMove()),
               [&](int dest) { pushIfSafe(createMove<mType, pType>(start, dest)); });
         });
-  }
-
-  /////////////////////////
-  // Move Factory        //
-  /////////////////////////
-  template<MoveType mType, PieceType pType>
-  Move<mType> createMove(int start, int end) const noexcept {
-    if constexpr(! CanCapture<mType>)
-      return Move<mType>(start, end, sideToMove(), pType);
-    else {
-      auto capturedPiece = getPieceOccupyingSquare(end, opposite(sideToMove()));
-      return capturedPiece != PieceType::NONE
-          ? Move<mType>(start, end, sideToMove(), pType, capturedPiece)
-          : Move<mType>(start, end, sideToMove(), pType);
-    }
   }
 
   /////////////////////////
