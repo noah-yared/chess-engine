@@ -174,7 +174,7 @@ class Bitboards {
   [[nodiscard]] std::string parsePiecePlacement() const {
     std::stringstream ss;
     std::string pieceStr = "prnbqkPRNBQK";
-    for (int bit = 63, consecutiveEmpty; bit; --bit) {
+    for (int bit = 63, consecutiveEmpty = 0; bit; --bit) {
       auto pType = getPieceType(bit);
       if (pType == PieceType::NONE) {
         ++consecutiveEmpty;
