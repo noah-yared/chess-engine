@@ -402,14 +402,14 @@ private:
   /////////////////////////
   // Pawn Move Helpers   //
   /////////////////////////
-  template<Color color>
+  template<Color color, MoveType mType = MoveType::Normal>
   void pushPawnAttackMoves(int dest) const {
     int leftAtkSquare = dest - Directions::sfamt(leftPawnAttack<color>);
     int rightAtkSquare = dest - Directions::sfamt(rightPawnAttack<color>);
-    if (!isSquareOnLeftEdge(dest) && isPieceOccupyingSquare(PieceType::PAWN, color, leftAtkSquare))
-      pushIfSafe(MoveFactory::createMove<MoveType::Normal, PieceType::PAWN>(leftAtkSquare, dest, *this));
-    if (!isSquareOnRightEdge(dest) && isPieceOccupyingSquare(PieceType::PAWN, color, rightAtkSquare))
-      pushIfSafe(MoveFactory::createMove<MoveType::Normal, PieceType::PAWN>(rightAtkSquare, dest, *this));
+    if (!isSquareOnRightEdge(dest) && isPieceOccupyingSquare(PieceType::PAWN, color, leftAtkSquare))
+      pushIfSafe(MoveFactory::createMove<mType, PieceType::PAWN>(leftAtkSquare, dest, *this));
+    if (!isSquareOnLeftEdge(dest) && isPieceOccupyingSquare(PieceType::PAWN, color, rightAtkSquare))
+      pushIfSafe(MoveFactory::createMove<mType, PieceType::PAWN>(rightAtkSquare, dest, *this));
   }
 };
 
@@ -455,7 +455,7 @@ inline void Position::pushLegalMoves<MoveType::Promotion, PieceType::PAWN>() con
               dest - Directions::sfamt(forward<color>), dest, *this));
         });
     BitUtils::bitsForEach<>(filterEnemySquares(filterRankFromBitboard<promotionRank<color>>(
-        squaresAttackedByPawns(color)), color), [&](int dest) { pushPawnAttackMoves<color>(dest); });
+        squaresAttackedByPawns(color)), color), [&](int dest) { pushPawnAttackMoves<color, MoveType::Promotion>(dest); });
   };
   isWhiteToMove() ? pushMoves.operator()<Color::WHITE>() : pushMoves.operator()<Color::BLACK>();
 }
@@ -464,7 +464,7 @@ template<>
 inline void Position::pushLegalMoves<MoveType::Enpassant, PieceType::PAWN>() const {
   auto pushMoves = [&]<Color color> {
     BitUtils::bitsForEach<>((1ULL << maybeEnpassantSquare().value_or(0ULL)) & ~1ULL, [&](int dest) {
-      pushPawnAttackMoves<color>(dest);
+      pushPawnAttackMoves<color, MoveType::Enpassant>(dest);
     });
   };
   isWhiteToMove() ? pushMoves.operator()<Color::WHITE>() : pushMoves.operator()<Color::BLACK>();
