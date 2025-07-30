@@ -12,3 +12,4 @@ venv/
 **/logs/
 **/__pycache__/
 tests/hello_test.cpp
+Testing/
