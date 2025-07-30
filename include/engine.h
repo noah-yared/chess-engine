@@ -78,7 +78,7 @@ private:
   Line alphaBeta(int alpha, int beta, int depth, bool isMaximizingPlayer, Color color) {
     if (!depth) // end of search reached, return final eval
       return { .score = position_.evaluation() };
-    const auto& possibleMoves = position_.legalMoves();
+    const auto possibleMoves = position_.legalMoves();
     nodesSearched_ += possibleMoves.size();
     if (possibleMoves.isEmpty()) // end of game reached, return final eval
       return { .score = position_.evaluation() };
