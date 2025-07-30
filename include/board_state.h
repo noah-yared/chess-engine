@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "board_state_snapshot.h"
+#include "board_utils.h"
 #include "pieces.h"
 #include "platform.h"
 #include "traits.h"
@@ -52,19 +53,6 @@ class BoardState {
     state_ |= rights << CASTLING_PRIVS; // set
   }
 
-  static int algebraicNotationToIndex(std::string algebraicNotation) {
-    assert(algebraicNotation.size() == 2);
-    return 7 - (algebraicNotation[0] - 'a') + ((algebraicNotation[1] - '1') << 3);
-  }
-
-  static std::string indexToAlgebraicNotation(int index) {
-    std::stringstream ss;
-    char rank = '1' + (index / FILES);
-    char file = 'a' + 7 - (index % RANKS);
-    ss << file << rank;
-    return ss.str();
-  }
-
 public:
   BoardState() : state_{encode({'K', 'Q', 'k', 'q'}, Color::WHITE, std::nullopt)} {};
   explicit BoardState(u32 state) : state_{state} {};
@@ -98,16 +86,42 @@ public:
   [[nodiscard]] Color getOpposition() const { return Color(blackToMove()); }
   [[nodiscard]] std::optional<int> getEnpassantSquare() const { return existsEnpassantSq() ? std::optional<int>(enpassantSq()) : std::nullopt; }
 
-  [[nodiscard]] std::string toString() const {
+  // optimized to avoid use of unordered_map, wrote custom hash function that perfectly maps chars to 
+  // respective castling destination
+  std::vector<int> availableCastlingDestinations(Color color) const {
+    // white castling bits are the upper 2 bits of the castling bits
+    std::vector<int> dests; dests.reserve(2); 
+    int isWhite = color == Color::WHITE, isBlack = color == Color::BLACK;
+    char kingside = 'k' * isBlack + 'K' * isWhite, queenside = 'q' * isBlack + 'Q' * isWhite;
+    if (isCastlingRightAvailable(kingside))
+      dests.push_back(CASTLING_DESTINATION(kingside));
+    if (isCastlingRightAvailable(queenside))
+      dests.push_back(CASTLING_DESTINATION(queenside));
+    return dests;
+  }
+
+  std::string parseCastlingRights() const {
+    if (!castlingBits())
+      return "-";
     std::stringstream ss;
-    for (char right : { 'k', 'q', 'K', 'Q' })
+    for (char right : { 'K', 'Q', 'k', 'q' })
       if (isCastlingRightAvailable(right))
         ss << right;
-    if (ss.str().empty())
-      ss << "-";
-    ss << (blackToMove() ? " b " : " w ");
-    ss << (existsEnpassantSq() ? indexToAlgebraicNotation(*getEnpassantSquare()) : "-");
-    return ss.str();  
+    return ss.str();
+  }
+
+  std::string parseTurn() const {
+    return blackToMove() ? "b" : "w";
+  }
+
+  std::string parseEnpassantSquare() const {
+    if (!existsEnpassantSq())
+      return "-";
+    return indexToAlgebraicNotation(enpassantSq());
+  }
+
+  std::string toString() const {
+    return parseCastlingRights() + " " + parseTurn() + " " + parseEnpassantSquare();
   }
 
   template<char CastlingRight, char... RemainingRights>
@@ -126,20 +140,6 @@ public:
     state_ |= static_cast<u32>(square.value_or(0)) << BIT_OFFSETS::ENPASSANT_SQ;
   }
   void updateTurn() { state_ ^= 1 << BIT_OFFSETS::TURN; }
-
-  // optimized to avoid use of unordered_map, wrote custom hash function that perfectly maps chars to 
-  // respective castling destination
-  std::vector<int> availableCastlingDestinations(Color color) const {
-    // white castling bits are the upper 2 bits of the castling bits
-    std::vector<int> dests; dests.reserve(2); 
-    int isWhite = color == Color::WHITE, isBlack = color == Color::BLACK;
-    char kingside = 'k' * isBlack + 'K' * isWhite, queenside = 'q' * isBlack + 'Q' * isWhite;
-    if (isCastlingRightAvailable(kingside))
-      dests.push_back(CASTLING_DESTINATION(kingside));
-    if (isCastlingRightAvailable(queenside))
-      dests.push_back(CASTLING_DESTINATION(queenside));
-    return dests;
-  }
 
   [[nodiscard]] u32 extract() const { return state_; }
   void revert(u32 state) { state_ = state; }

@@ -164,10 +164,15 @@ public:
   std::string stringifyBitboards() const { return bitboards_.toString(); }
   std::string stringifyBoardState() const { return state_.toString(); }
   bool areBitboardsConsistent() const { return bitboards_.isConsistent(); }
-
-  // Useful edge detection helpers
-  [[nodiscard]] static bool isSquareOnLeftEdge(int square) { return (square & 7) == 7; }
-  [[nodiscard]] static bool isSquareOnRightEdge(int square) { return (square & 7) == 0; }
+  std::string toFen() const {
+    std::stringstream ss;
+    ss << bitboards_.parsePiecePlacement()
+       << " " << state_.parseTurn()
+       << " " << state_.parseCastlingRights()
+       << " " << state_.parseEnpassantSquare()
+       << " 0 1"; // not tracking halfmove clock or fullmove number
+    return ss.str();
+  }
 
   /////////////////////////
   // Operators           //

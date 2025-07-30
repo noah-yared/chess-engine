@@ -147,6 +147,11 @@ class Bitboards {
     return PieceType::NONE;
   }
 
+  // Piece must exist on the square
+  [[nodiscard]] Color getPieceColor(int square) const noexcept {
+    return whiteBB_ & (1ULL << square) ? Color::WHITE : Color::BLACK;
+  }
+
   [[nodiscard]] constexpr bool operator==(const Bitboards& other) const noexcept { return bbs_ == other.bbs_; }
   [[nodiscard]] constexpr bool operator!=(const Bitboards& other) const noexcept { return bbs_ != other.bbs_; }
 
@@ -164,6 +169,29 @@ class Bitboards {
       }
     }
     return true;
+  }
+
+  [[nodiscard]] std::string parsePiecePlacement() const {
+    std::stringstream ss;
+    std::string pieceStr = "prnbqkPRNBQK";
+    for (int bit = 63, consecutiveEmpty; bit; --bit) {
+      auto pType = getPieceType(bit);
+      if (pType == PieceType::NONE) {
+        ++consecutiveEmpty;
+        if (bit % FILES == 0) {
+          ss << consecutiveEmpty << (bit ? "/" : "");
+          consecutiveEmpty = 0;
+        }
+      } else {
+        if (consecutiveEmpty)
+          ss << consecutiveEmpty;
+        ss << pieceStr[pieceToKey(pType, getPieceColor(bit))];
+        if (bit && bit % FILES == 0)
+          ss << '/';
+        consecutiveEmpty = 0;
+      }
+    }
+    return ss.str();
   }
 
   [[nodiscard]] std::string toString() const {
