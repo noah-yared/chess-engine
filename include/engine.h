@@ -21,9 +21,10 @@ private:
   Position position_;
   StateStack<BoardStateSnapshot> undoStack_;
   TranspositionTable tt_;
+  u64 nodesSearched_;
 
   // private constructor for testing
-  explicit SearchEngine(const Position& position, size_t ttSize) : position_{position}, undoStack_{}, tt_{ttSize} {};
+  explicit SearchEngine(const Position& position, size_t ttSize) : position_{position}, undoStack_{}, tt_{ttSize}, nodesSearched_{0ULL} {};
 
   struct Line {
     std::optional<MoveVariant> move = std::nullopt;
@@ -78,6 +79,7 @@ private:
     if (!depth) // end of search reached, return final eval
       return { .score = position_.evaluation() };
     const auto& possibleMoves = position_.legalMoves();
+    nodesSearched_ += possibleMoves.size();
     if (possibleMoves.isEmpty()) // end of game reached, return final eval
       return { .score = position_.evaluation() };
     int originalAlpha = alpha, originalBeta = beta;
@@ -96,8 +98,8 @@ private:
   }
 
 public:
-  SearchEngine() : position_{}, undoStack_{}, tt_{} {};
-  explicit SearchEngine(const std::string& fen) : position_{fen}, undoStack_{}, tt_{} {};
+  SearchEngine() : position_{}, undoStack_{}, tt_{}, nodesSearched_{0ULL} {};
+  explicit SearchEngine(const std::string& fen) : position_{fen}, undoStack_{}, tt_{}, nodesSearched_{0ULL} {};
 
   // Factory method for testing - creates engine without transposition table allocation
   [[nodiscard]] static SearchEngine withEmptyTTForTesting(const Position& position) {
@@ -128,6 +130,7 @@ public:
     auto [ maybeMove, score ] = alphaBeta(
         NEGINF, POSINF, depth, position_.isWhiteToMove(), position_.sideToMove());
     assert(maybeMove && "game is over, no further moves can be played!");
+    assert(position_.legalMoves().contains(*maybeMove) && "move not found in legal moves");
     advance(*maybeMove);
     return *maybeMove;
   }
@@ -137,5 +140,7 @@ public:
   void dumpPosition() const {
     std::cout << position_ << '\n';
   }  
+
+  u64 getNodesSearchedCount() const { return nodesSearched_; }
 
 };
