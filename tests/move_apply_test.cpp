@@ -3,45 +3,10 @@
 #include <string>
 
 #include "move.h"
-#include "engine.h"
+#include "position.h"
 #include "test_utils.h"
 
-class MoveApplyTest : public ::testing::Test {
-protected:
-  using Normal = Move<MoveType::Normal>;
-  using DoublePush = Move<MoveType::DoublePawnPush>;
-  using Enpassant = Move<MoveType::Enpassant>;
-  using Promotion = Move<MoveType::Promotion>;
-  using Castle = Move<MoveType::Castle>;
-
-  Position pos;
-
-  void loadStartingPosition() { pos = Position::fromStartingPosition(); }
-  void loadFen(const std::string& fen) { pos = Position(fen); }
-  void loadAscii(const std::string& ascii, const std::string& castlingRights = "KQkq", const std::string& side = "w",
-      const std::string& enpassant = "-") { pos = Position::fromAscii(ascii, castlingRights, side, enpassant); }
-
-  [[nodiscard]] Normal normal(Square from, Square to) const {
-    if (auto capturedPiece = pos.getPieceOccupyingSquare(to); capturedPiece != PieceType::NONE)
-      return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from), capturedPiece };
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-  [[nodiscard]] Promotion promotion(Square from, Square to) const {
-    if (auto capturedPiece = pos.getPieceOccupyingSquare(to); capturedPiece != PieceType::NONE)
-      return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from), capturedPiece };
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-  [[nodiscard]] Enpassant enpassant(Square from, Square to) const {
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-  [[nodiscard]] DoublePush doublePush(Square from, Square to) const {
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-  [[nodiscard]] Castle castle(Square from, Square to) const {
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-
-};
+class MoveApplyTest : public ChessTestFixture {};
 
 TEST_F(MoveApplyTest, HandlesPawnPushMove) {
   loadStartingPosition();

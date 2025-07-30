@@ -8,63 +8,17 @@
 #include <type_traits>
 #include <unordered_set>
 
-#include "traits.h"
+#include "board_utils.h"
+#include "move_utils.h"
 #include "position.h"
 #include "test_utils.h"
 
-class MoveGenerationTest : public testing::Test {
+class MoveGenerationTest : public ChessTestFixture {
 protected:
-  Position pos;
-
-  void loadStartingPosition() { pos = Position::fromStartingPosition(); }
-  void loadFen(const std::string& fen) { pos.loadFEN(fen); }
-  void loadAscii(const std::string& ascii) { pos.loadAsciiBoard(ascii); }
-
-  using Normal = Move<MoveType::Normal>;
-  using DoublePush = Move<MoveType::DoublePawnPush>;
-  using Enpassant = Move<MoveType::Enpassant>;
-  using Promotion = Move<MoveType::Promotion>;
-  using Castle = Move<MoveType::Castle>;
-
-  [[nodiscard]] Normal normal(Square from, Square to) {
-    if (auto capturedPiece = pos.getPieceOccupyingSquare(to); capturedPiece != PieceType::NONE)
-      return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from), capturedPiece };
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-  [[nodiscard]] Promotion promotion(Square from, Square to) {
-    if (auto capturedPiece = pos.getPieceOccupyingSquare(to); capturedPiece != PieceType::NONE)
-      return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from), capturedPiece };
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-  [[nodiscard]] DoublePush doublePush(Square from, Square to) {
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-  [[nodiscard]] Enpassant enpassant(Square from, Square to) {
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-  [[nodiscard]] Castle castle(Square from, Square to) {
-    return { from, to, pos.sideToMove(), pos.getPieceOccupyingSquare(from) };
-  }
-
-  // uses current state of instance position object pos
-  [[nodiscard]] MoveVariant uciToMove(const std::string& uci) {
-    auto from = Square(7 - (uci[0] - 'a') + (uci[1] - '1') * FILES), to = Square(7 - (uci[2] - 'a') + (uci[3] - '1') * FILES);
-    auto movedPiece = pos.getPieceOccupyingSquare(from), capturedPiece = pos.getPieceOccupyingSquare(to);
-    if (uci.size() == 5)
-      return promotion(from, to);
-    if (auto maybeEnpassantSq = pos.maybeEnpassantSquare(); maybeEnpassantSq && (to == *maybeEnpassantSq) && (movedPiece == PieceType::PAWN))
-      return enpassant(from, to);
-    if (std::abs(static_cast<int>(from) - static_cast<int>(to)) == FILES * 2 && movedPiece == PieceType::PAWN)
-      return doublePush(from, to);
-    if (std::abs(static_cast<int>(from) - static_cast<int>(to)) == 2 && movedPiece == PieceType::KING)
-      return castle(from, to);
-    return normal(from, to);
-  }
-
   template<typename... UciMoveTypes>
   requires (std::conjunction_v<std::is_convertible<UciMoveTypes, std::string>...>) // make sure all types are strings
   void expectLegalMoves(const UciMoveTypes&... uciMoves) {
-    MoveList expectedMoves(uciToMove(uciMoves)...), actualMoves = pos.legalMoves();
+    MoveList expectedMoves(uciToMove(uciMoves, pos)...), actualMoves = pos.legalMoves();
     EXPECT_EQ(actualMoves, expectedMoves) << diff(actualMoves, expectedMoves);
   }
 
