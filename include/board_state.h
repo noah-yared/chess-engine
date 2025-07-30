@@ -58,7 +58,6 @@ class BoardState {
   }
 
   static std::string indexToAlgebraicNotation(int index) {
-    std::cout << "converting " << index << " to algebraic notation...";
     std::stringstream ss;
     char rank = '1' + (index / FILES);
     char file = 'a' + 7 - (index % RANKS);
