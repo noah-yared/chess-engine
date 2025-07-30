@@ -428,7 +428,7 @@ inline std::ostream& operator<<(std::ostream& os, const Position& pos) {
 // Position::doesMoveExposeAllyKing() specialization
 template<>
 inline bool Position::doesMoveExposeAllyKing<MoveType::Castle>(const Move<MoveType::Castle> move) const {
-  return Position::isCastleSafe(move.end());
+  return ! Position::isCastleSafe(move.end());
 }
 
 // Position::pushLegalMoves() specializations for move types not handled in primary template
