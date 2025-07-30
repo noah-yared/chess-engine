@@ -2,7 +2,7 @@
 #include "position.h"
 
 const MoveList& Position::legalMoves() const {
-  clearMoveBuffer(); // make sure buffer is cleared
+  moves_.clear(); // make sure buffer is cleared
 
   // push normal moves
   pushLegalMoves<MoveType::Normal, PieceType::PAWN>();
