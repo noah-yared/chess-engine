@@ -24,19 +24,24 @@ FetchContent_MakeAvailable(googletest)
 
 configure_file(${CMAKE_SOURCE_DIR}/include/engine_config.h.in ${CMAKE_BINARY_DIR}/engine_config.h)
 
-add_executable(engine src/evaluate.cpp src/main.cpp src/movegen.cpp)
+add_executable(engine src/bitboards.cpp src/board_state.cpp src/evaluate.cpp src/main.cpp src/move_list.cpp src/position.cpp)
 
 target_include_directories(engine PUBLIC ${CMAKE_SOURCE_DIR}/include PRIVATE ${CMAKE_BINARY_DIR} PRIVATE ${CMAKE_SOURCE_DIR}/external/crow/include PRIVATE ${CMAKE_SOURCE_DIR}/external/asio/asio/include)
 
 enable_testing()
 
 add_executable(engine_tests # declare test binary
+    # test files
     tests/check_detection_test.cpp
     tests/move_apply_test.cpp
     tests/move_undo_test.cpp
     tests/move_generation_test.cpp
-    # needed for move generation tests
-    src/movegen.cpp
+    # src files
+    src/bitboards.cpp
+    src/board_state.cpp
+    # src/evaluate.cpp (not needed for tests)
+    src/move_list.cpp
+    src/position.cpp
 )
 target_include_directories(engine_tests PUBLIC ${CMAKE_SOURCE_DIR}/include PUBLIC ${CMAKE_SOURCE_DIR}/tests/include)
 target_link_libraries(engine_tests GTest::gtest_main) # provides basic main function to run tests

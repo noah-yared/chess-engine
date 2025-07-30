@@ -38,47 +38,20 @@ class BoardState {
   [[nodiscard]] bool existsEnpassantSq() const { return (state_ >> BIT_OFFSETS::EXISTS_ENPASSANT_SQ) & 0x1; }
   [[nodiscard]] int enpassantSq() const { return (state_ >> BIT_OFFSETS::ENPASSANT_SQ) & 0x3f; }
 
-  void setTurn(std::string color) {
-    if ((color == "b") != blackToMove()) // need to toggle turn due to mismatch
-      updateTurn();
-  }
-
-  void setCastlingPrivileges(std::string privs) {
-    u32 rights = 0;
-    if (privs == "-")
-      privs = "";
-    for (char c : privs)
-      rights |= 1 << PRIV_BIT_OFFSET(c);
-    state_ &= ~(0xf << CASTLING_PRIVS); // clear
-    state_ |= rights << CASTLING_PRIVS; // set
-  }
+  void setTurn(const std::string& color);
+  void setCastlingPrivileges(const std::string& privs);
 
 public:
   BoardState() : state_{encode({'K', 'Q', 'k', 'q'}, Color::WHITE, std::nullopt)} {};
   explicit BoardState(u32 state) : state_{state} {};
   explicit BoardState(const BoardStateSnapshot& snapshot) : state_{snapshot.state} {};
-  BoardState(std::string turn, std::string castlingRights, std::string enpassant) : state_{} {
-    setTurn(turn);
-    setCastlingPrivileges(castlingRights);
-    setEnpassantSquare(enpassant == "-"
-        ? std::nullopt
-        : std::optional{ algebraicNotationToIndex(enpassant) }
-    );
-  }
   BoardState(const std::vector<char>& castlingRights, Color playerTurn, std::optional<int> enpassantSq) : 
     state_{encode(castlingRights, playerTurn, enpassantSq)} {};
-  BoardState(const std::string& fen) {
-    size_t start = fen.find_first_of(' ') + 1;
-    setTurn(fen.substr(start, 1));
-    start += 2;
-    setCastlingPrivileges(fen.substr(start, fen.find_first_of(' ', start) - start));
-    start = fen.find_first_of(' ', start) + 1;
-    setEnpassantSquare((fen.find_first_of(' ', start) - start != 2)
-        ? std::nullopt
-        : std::optional{ algebraicNotationToIndex(fen.substr(start, 2)) }
-    );
-  }
 
+  BoardState(const std::string& turn, const std::string& castlingRights, const std::string& enpassant);
+  BoardState(const std::string& fen);
+
+  // Simple accessors
   [[nodiscard]] int castlingBits() const { return (state_ >> BIT_OFFSETS::CASTLING_PRIVS) & 0xf; }
   [[nodiscard]] bool isCastlingRightAvailable(char right) const { return castlingBits() & (1 << PRIV_BIT_OFFSET(right)); }
   [[nodiscard]] bool blackToMove() const { return (state_ >> BIT_OFFSETS::TURN) & 0x1; }
@@ -86,43 +59,13 @@ public:
   [[nodiscard]] Color getOpposition() const { return Color(blackToMove()); }
   [[nodiscard]] std::optional<int> getEnpassantSquare() const { return existsEnpassantSq() ? std::optional<int>(enpassantSq()) : std::nullopt; }
 
-  // optimized to avoid use of unordered_map, wrote custom hash function that perfectly maps chars to 
-  // respective castling destination
-  std::vector<int> availableCastlingDestinations(Color color) const {
-    // white castling bits are the upper 2 bits of the castling bits
-    std::vector<int> dests; dests.reserve(2); 
-    int isWhite = color == Color::WHITE, isBlack = color == Color::BLACK;
-    char kingside = 'k' * isBlack + 'K' * isWhite, queenside = 'q' * isBlack + 'Q' * isWhite;
-    if (isCastlingRightAvailable(kingside))
-      dests.push_back(CASTLING_DESTINATION(kingside));
-    if (isCastlingRightAvailable(queenside))
-      dests.push_back(CASTLING_DESTINATION(queenside));
-    return dests;
-  }
+  [[nodiscard]] std::vector<int> availableCastlingDestinations(Color color) const;
 
-  std::string parseCastlingRights() const {
-    if (!castlingBits())
-      return "-";
-    std::stringstream ss;
-    for (char right : { 'K', 'Q', 'k', 'q' })
-      if (isCastlingRightAvailable(right))
-        ss << right;
-    return ss.str();
-  }
-
-  std::string parseTurn() const {
-    return blackToMove() ? "b" : "w";
-  }
-
-  std::string parseEnpassantSquare() const {
-    if (!existsEnpassantSq())
-      return "-";
-    return indexToAlgebraicNotation(enpassantSq());
-  }
-
-  std::string toString() const {
-    return parseCastlingRights() + " " + parseTurn() + " " + parseEnpassantSquare();
-  }
+  // String parsing methods
+  std::string parseCastlingRights() const;
+  std::string parseTurn() const;
+  std::string parseEnpassantSquare() const;
+  std::string toString() const;
 
   template<char CastlingRight, char... RemainingRights>
   void stripCastlingPrivileges() {
@@ -144,10 +87,8 @@ public:
   [[nodiscard]] u32 extract() const { return state_; }
   void revert(u32 state) { state_ = state; }
 
-  bool operator==(const BoardState& other) const {
-    return castlingBits() == other.castlingBits() && getTurn() == other.getTurn()
-        && getEnpassantSquare().value_or(0) == other.getEnpassantSquare().value_or(0);
-  }
-  bool operator!=(const BoardState& other) const { return ! (operator==(other)); }
+  // Complex comparison operators moved to source file
+  bool operator==(const BoardState& other) const;
+  bool operator!=(const BoardState& other) const;
 };
 

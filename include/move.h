@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 #include "bitboards.h"
+#include "board_utils.h"
 #include "pieces.h"
 
 // different types of moves
@@ -61,7 +62,7 @@ public:
   
   [[nodiscard]] std::string uci() const {
     std::stringstream ss;
-    ss << getAlgebraicNotation(start_) << getAlgebraicNotation(end_);
+    ss << indexToAlgebraicNotation(start_) << indexToAlgebraicNotation(end_);
     if (mType == MoveType::Promotion) ss << 'q'; // always promote to queen
     return ss.str();
   }
@@ -78,45 +79,17 @@ public:
     return !operator==(other);
   }
 
-  [[nodiscard]] static std::string getAlgebraicNotation(int square) {
-    std::stringstream ss;
-    char file = static_cast<char>('a' + (7 - (square % RANKS)));
-    char rank = static_cast<char>('1' + (square / FILES));
-    ss << file << rank;
-    return ss.str();
-  }
-
-  [[nodiscard]] static std::string getStringNotation(int square) {
-    std::stringstream ss;
-    int row = 8 - (square % 8);
-    int col = 1 + (square / 8);
-    ss << '(' << row << ", " << col << ')';
-    return ss.str();
-  }
-
-  static inline const std::unordered_map<PieceType, char> pieceToChar = {
-    {PieceType::PAWN,   'P'},
-    {PieceType::KNIGHT, 'N'},
-    {PieceType::BISHOP, 'B'},
-    {PieceType::ROOK,   'R'},
-    {PieceType::QUEEN,  'Q'},
-    {PieceType::KING,   'K'},
-  };
-
   void print() const {
-    // helper lambda functions
-    const auto getPieceChar = [this](PieceType piece) -> char {
-      return (side() == Color::WHITE ? pieceToChar.at(piece) 
-                                     : std::tolower(pieceToChar.at(piece)));
-    };
-    std::cout << getPieceChar(moved()) << ": " << getStringNotation(start_) << " to " << getStringNotation(end_);
+    std::cout << uci();
     switch (type) {
-      // case MoveType::Capture: std::cout << ", x"; break; //<< getPieceChar(captured()); break;
-      case MoveType::Enpassant: std::cout << " | e.p."; break;
-      case MoveType::Promotion: std::cout << " | =Q"; break;
-      case MoveType::DoublePawnPush: std::cout << " | P.P"; break;
-      case MoveType::Castle: std::cout << " | " << (side() == Color::WHITE ? "O-O-O" : "O-O"); break;
-      default: break; // normal/quiet (may include capture)
+      case MoveType::Enpassant: std::cout << " (ep)"; break;
+      case MoveType::DoublePawnPush: std::cout << " (dp)"; break;
+      case MoveType::Castle:
+        std::cout << " (" << (side() == Color::WHITE
+            ? (start() < end() ? "O-O-O" : "O-O")
+            : (start() < end() ? "o-o-o" : "o-o")) << ')';
+        break;
+      default: break;
     };
     std::cout << '\n';
   }

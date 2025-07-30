@@ -48,30 +48,8 @@ class Bitboards {
   }
 
  public:
+  // Simple constructors stay in header
   Bitboards() noexcept: bbs_(STARTING_BBS), whiteBB_(STARTING_WHITE_BB), blackBB_(STARTING_BLACK_BB) {};
-  explicit Bitboards(const std::string& sBoard, FromAsciiBoard) : bbs_{}, whiteBB_{}, blackBB_{} {
-    std::string pieceString = "prnbqkPRNBQK";
-    int bit = 63;
-    for (char c : sBoard) {
-      if (iswspace(c))
-        continue;
-      if (auto pos = pieceString.find(c); pos != std::string::npos)
-        togglePieceSquare(static_cast<int>(pos), bit);
-      --bit;
-    }
-    if (bit != -1)
-      throw std::runtime_error("Invalid ascii board format passed in! Make sure to specify all squares on the board!");
-  }
-  explicit Bitboards(const std::string& fen, FromFEN) : bbs_{}, whiteBB_{}, blackBB_{} {
-    std::string pieceString = "prnbqkPRNBQK";
-    std::string fenPieces = fen.substr(0, fen.find_first_of(' '));
-    int bit = 63;
-    for (auto c : fenPieces) {
-      if (c == '/') continue;
-      if (isdigit(c)) bit -= (c - '0');
-      else togglePieceSquare(static_cast<int>(pieceString.find(c)), bit--);
-    }
-  };
   explicit Bitboards(const std::array<u64, NUM_BITBOARDS>& bbs) : bbs_{bbs} {
     whiteBB_ = combine(wStart(), wEnd());
     blackBB_ = combine(bStart(), bEnd());
@@ -82,6 +60,10 @@ class Bitboards {
     whiteBB_ = combine(wStart(), wEnd());
     blackBB_ = combine(bStart(), bEnd());
   };
+
+  // Complex constructors moved to source file
+  explicit Bitboards(const std::string& sBoard, FromAsciiBoard);
+  explicit Bitboards(const std::string& fen, FromFEN);
 
   static Color keyToColor(int key) {
     return Color(key >= NUM_PIECE_TYPES);
@@ -97,10 +79,7 @@ class Bitboards {
 
   void togglePieceSquare(int key, int square) noexcept {
     bbs_[key] ^= 1ULL << square;
-    if (keyToColor(key) == Color::WHITE) 
-      whiteBB_ ^= 1ULL << square;
-    else
-      blackBB_ ^= 1ULL << square;
+    keyToColor(key) == Color::WHITE ? (whiteBB_ ^= 1ULL << square) : (blackBB_ ^= 1ULL << square);
   }
 
   // Iterators for all bitboards
@@ -139,11 +118,9 @@ class Bitboards {
 
   [[nodiscard]] PieceType getPieceType(int square, Color color) const noexcept {
     if (u64 pieceMask = 1ULL << square; allyBB(color) & pieceMask)
-      return findPiece(
-        color == Color::WHITE ? wStart() : bStart(),
-        color == Color::WHITE ? wEnd()   : bEnd(),
-        pieceMask
-      );
+      return color == Color::WHITE
+        ? findPiece(wStart(), wEnd(), pieceMask)
+        : findPiece(bStart(), bEnd(), pieceMask);
     return PieceType::NONE;
   }
 
@@ -155,77 +132,8 @@ class Bitboards {
   [[nodiscard]] constexpr bool operator==(const Bitboards& other) const noexcept { return bbs_ == other.bbs_; }
   [[nodiscard]] constexpr bool operator!=(const Bitboards& other) const noexcept { return bbs_ != other.bbs_; }
 
-  [[nodiscard]] bool isConsistent() const noexcept {
-    std::string pieceString = "prnbqkPRNBQK";
-    if (whiteBB_ & blackBB_) return false;
-    if (combine(wStart(), wEnd()) != whiteBB_) return false;
-    if (combine(bStart(), bEnd()) != blackBB_) return false;
-    for (int i = 0; i < NUM_BITBOARDS; ++i) {
-      for (int j = i + 1; j < NUM_BITBOARDS; ++j) {
-        if (bbs_[i] & bbs_[j]) {
-          std::cout << pieceString[i] << "'s bitboard and " << pieceString[j] << "'s bitboard overlap!" << std::endl;
-          return false;
-        }
-      }
-    }
-    return true;
-  }
-
-  [[nodiscard]] std::string parsePiecePlacement() const {
-    std::stringstream ss;
-    std::string pieceStr = "prnbqkPRNBQK";
-    for (int bit = 63, consecutiveEmpty = 0; bit; --bit) {
-      auto pType = getPieceType(bit);
-      if (pType == PieceType::NONE) {
-        ++consecutiveEmpty;
-        if (bit % FILES == 0) {
-          ss << consecutiveEmpty << (bit ? "/" : "");
-          consecutiveEmpty = 0;
-        }
-      } else {
-        if (consecutiveEmpty)
-          ss << consecutiveEmpty;
-        ss << pieceStr[pieceToKey(pType, getPieceColor(bit))];
-        if (bit && bit % FILES == 0)
-          ss << '/';
-        consecutiveEmpty = 0;
-      }
-    }
-    return ss.str();
-  }
-
-  [[nodiscard]] std::string toString() const {
-    std::string pieceString = "prnbqkPRNBQK";
-    std::stringstream ss;
-    for (int r = 7; r >= 0; --r) {
-      ss << "    "; // indent each rank
-      for (int c = 7; c >= 0; --c) {
-        int sq = r * FILES + c;
-        if (auto pType = getPieceType(sq); pType != PieceType::NONE) {
-          if (pType > PieceType::KING)
-            throw std::runtime_error("Invalid piece type");
-          bool isWhite = whiteBB() & (1ULL << sq);
-          ss << pieceString[pieceToKey(pType, isWhite ? Color::WHITE : Color::BLACK)];
-        } else {
-          ss << '.';
-        }
-      }
-      ss << '\n';
-    }
-    return ss.str();
-  }
-
-};
-
-inline std::ostream& operator<<(std::ostream& os, const Bitboards& bitboards) noexcept {
-  const auto pieceString = "prnbqkPRNBQK";
-  os   << "Bitboards(\nbbs_=" 
-        << "[\n";
-  for (int i = 0; i < NUM_BITBOARDS; ++i) {
-    os << "       " << pieceString[i] << ": " << std::bitset<64>(bitboards.bbs_[i]) << ",\n";
-  }
-  os   << "]\n"
-        << "whiteBB_: " << std::bitset<64>(bitboards.whiteBB_) << "\n"
-        << "blackBB_: " << std::bitset<64>(bitboards.blackBB_) << "\n)";
-  return os;
+  // Complex methods moved to source file
+  [[nodiscard]] bool isConsistent() const noexcept;
+  [[nodiscard]] std::string parsePiecePlacement() const;
+  [[nodiscard]] std::string toString() const;
 };
