@@ -34,7 +34,10 @@ add_executable(engine_tests # declare test binary
     tests/check_detection_test.cpp
     tests/move_apply_test.cpp
     tests/move_undo_test.cpp
-    tests/move_generation_test.cpp)
+    tests/move_generation_test.cpp
+    # needed for move generation tests
+    src/movegen.cpp
+)
 target_include_directories(engine_tests PUBLIC ${CMAKE_SOURCE_DIR}/include PUBLIC ${CMAKE_SOURCE_DIR}/tests/include)
 target_link_libraries(engine_tests GTest::gtest_main) # provides basic main function to run tests
 
