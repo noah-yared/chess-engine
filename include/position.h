@@ -43,7 +43,7 @@ public:
   static Position fromStartingPosition() {
     return Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
   }
-  
+
   static Position fromAscii(const std::string& asciiBoard, const std::string turn = "w",
       const std::string castlingRights = "-", const std::string enpassant = "-") {
     return {
@@ -148,7 +148,7 @@ public:
   [[nodiscard]] static u64 filterFileFromBitboard(u64 bb) { return BitUtils::filterFile<file>(bb); }
 
   // Bitboard clearers
-  [[nodiscard]] u64 clearOccupiedSquares(u64 bb, Color color) const { return bb & ~bitboards_.combinedBB(); }
+  [[nodiscard]] u64 clearOccupiedSquares(u64 bb) const { return bb & ~bitboards_.combinedBB(); }
   [[nodiscard]] u64 clearAllySquares(u64 bb, Color color) const { return bb & ~bitboards_.allyBB(color); }
   [[nodiscard]] u64 clearEnemySquares(u64 bb, Color color) const { return bb & ~bitboards_.opposingBB(color); }
   template<int rank>
@@ -315,7 +315,7 @@ private:
 
   inline u64 singlePawnPushTargets(Color color) const {
     auto pushDests = [&]<Color color> {
-      return clearOccupiedSquares(Position::stepBitboard<forward<color>>(getPieceBitboard(PieceType::PAWN, color)), color);
+      return clearOccupiedSquares(Position::stepBitboard<forward<color>>(getPieceBitboard(PieceType::PAWN, color)));
     };
     return color == Color::WHITE ? pushDests.operator()<Color::WHITE>() : pushDests.operator()<Color::BLACK>();
   }
