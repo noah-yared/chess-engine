@@ -207,33 +207,24 @@ private:
     BitUtils::bitsForEach<>(
         getPieceBitboard(pType, sideToMove()), [&](int start) {
           BitUtils::bitsForEach<>(clearAllySquares(attackedSquares<pType>(start, sideToMove()), sideToMove()),
-              [&](int dest) { pushIfSafe(MoveFactory::createMove<mType, pType>(start, dest, *this)); });
+              [&](int dest) { pushIfSafe(createMove<mType, pType>(start, dest)); });
         });
   }
 
   /////////////////////////
   // Move Factory        //
   /////////////////////////
-  class MoveFactory {
-  public:
-    template<MoveType mType, PieceType pType>
-    static Move<mType> createMove(int start, int end, const Position& pos) {   
-      auto capturedPiece = pos.getPieceOccupyingSquare(end, opposite(pos.sideToMove()));
-      if (capturedPiece != PieceType::NONE) {
-        return Move<mType>(start, end, pos.sideToMove(), pType, capturedPiece);
-      } else {
-        return Move<mType>(start, end, pos.sideToMove(), pType);
-      }
+  template<MoveType mType, PieceType pType>
+  Move<mType> createMove(int start, int end) const noexcept {
+    if constexpr(! CanCapture<mType>)
+      return Move<mType>(start, end, sideToMove(), pType);
+    else {
+      auto capturedPiece = getPieceOccupyingSquare(end, opposite(sideToMove()));
+      return capturedPiece != PieceType::NONE
+          ? Move<mType>(start, end, sideToMove(), pType, capturedPiece)
+          : Move<mType>(start, end, sideToMove(), pType);
     }
-
-    // partial template specialization for non capturing move types (enpassant, double pawn push, castle)
-    // as they can not capture pieces, avoiding an unnecessary branch that checks for captured piece (always false)
-    template<MoveType mType, PieceType pType>
-    requires (! CanCapture<mType>)
-    static Move<mType> createMove(int start, int end, const Position& pos) {
-      return Move<mType>(start, end, pos.sideToMove(), pType);
-    }
-  };
+  }
 
   /////////////////////////
   // State Updates       //
@@ -415,9 +406,9 @@ private:
     int leftAtkSquare = dest - Directions::sfamt(leftPawnAttack<color>);
     int rightAtkSquare = dest - Directions::sfamt(rightPawnAttack<color>);
     if (!isSquareOnRightEdge(dest) && isPieceOccupyingSquare(PieceType::PAWN, color, leftAtkSquare))
-      pushIfSafe(MoveFactory::createMove<mType, PieceType::PAWN>(leftAtkSquare, dest, *this));
+      pushIfSafe(createMove<mType, PieceType::PAWN>(leftAtkSquare, dest));
     if (!isSquareOnLeftEdge(dest) && isPieceOccupyingSquare(PieceType::PAWN, color, rightAtkSquare))
-      pushIfSafe(MoveFactory::createMove<mType, PieceType::PAWN>(rightAtkSquare, dest, *this));
+      pushIfSafe(createMove<mType, PieceType::PAWN>(rightAtkSquare, dest));
   }
 };
 
@@ -445,8 +436,7 @@ inline void Position::pushLegalMoves<MoveType::Normal, PieceType::PAWN>() const 
   auto pushMoves = [&]<Color color> {
     BitUtils::bitsForEach<>(
         clearRankFromBitboard<promotionRank<color>>(singlePawnPushTargets(color)), [&](int dest) {
-          pushIfSafe(MoveFactory::createMove<MoveType::Normal, PieceType::PAWN>(
-              dest - Directions::sfamt(forward<color>), dest, *this));
+          pushIfSafe(createMove<MoveType::Normal, PieceType::PAWN>(dest - Directions::sfamt(forward<color>), dest));
         });
     BitUtils::bitsForEach<>(filterEnemySquares(clearRankFromBitboard<promotionRank<color>>(
         squaresAttackedByPawns(color)), color), [&](int dest) { pushPawnAttackMoves<color>(dest); });
@@ -459,8 +449,7 @@ inline void Position::pushLegalMoves<MoveType::Promotion, PieceType::PAWN>() con
   auto pushMoves = [&]<Color color> {
     BitUtils::bitsForEach<>(
         filterRankFromBitboard<promotionRank<color>>(singlePawnPushTargets(color)), [&](int dest) {
-          pushIfSafe(MoveFactory::createMove<MoveType::Promotion, PieceType::PAWN>(
-              dest - Directions::sfamt(forward<color>), dest, *this));
+          pushIfSafe(createMove<MoveType::Promotion, PieceType::PAWN>(dest - Directions::sfamt(forward<color>), dest));
         });
     BitUtils::bitsForEach<>(filterEnemySquares(filterRankFromBitboard<promotionRank<color>>(
         squaresAttackedByPawns(color)), color), [&](int dest) { pushPawnAttackMoves<color, MoveType::Promotion>(dest); });
@@ -485,8 +474,7 @@ inline void Position::pushLegalMoves<MoveType::DoublePawnPush, PieceType::PAWN>(
         clearOccupiedSquares(Position::stepBitboard<forward<color>>(singlePawnPushTargets(color), [](u64 bb) {
           return Position::filterRankFromBitboard<pawnRank<color> + rankDelta<color>>(bb);
         })), [&](int dest) {
-          pushIfSafe(MoveFactory::createMove<MoveType::DoublePawnPush, PieceType::PAWN>(
-              dest - 2 * Directions::sfamt(forward<color>), dest, *this));
+          pushIfSafe(createMove<MoveType::DoublePawnPush, PieceType::PAWN>(dest - 2 * Directions::sfamt(forward<color>), dest));
         });
   };
   isWhiteToMove() ? pushMoves.operator()<Color::WHITE>() : pushMoves.operator()<Color::BLACK>();
@@ -499,9 +487,8 @@ inline void Position::pushLegalMoves<MoveType::Castle, PieceType::KING>() const 
       0ULL, [](u64 dests, int sq) { return dests | (1ULL << sq); });
   auto pushMoves = [&]<Color color> {
     BitUtils::bitsForEach<>(castlingTargets, [&](int dest) {
-        pushIfSafe(MoveFactory::createMove<MoveType::Castle, PieceType::KING>(
-            kingSquare(sideToMove()), dest, *this));
-        });
+      pushIfSafe(createMove<MoveType::Castle, PieceType::KING>( kingSquare(sideToMove()), dest));
+    });
   };
   isWhiteToMove() ? pushMoves.operator()<Color::WHITE>() : pushMoves.operator()<Color::BLACK>();
 }
