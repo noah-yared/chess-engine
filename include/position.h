@@ -29,6 +29,7 @@ public:
   using RNG = std::mt19937_64; // random number generator for hashing function
 
   friend std::ostream& operator<<(std::ostream& os, const Position& pos);
+  friend void debug(Position& pos);
 
   /////////////////////////
   // Constructors        //
@@ -173,6 +174,8 @@ public:
   /////////////////////////
   bool operator==(const Position& other) const { return bitboards_ == other.bitboards_ && state_ == other.state_ && hash_ == other.hash_; } 
   bool operator!=(const Position& other) const { return ! (operator==(other)); }
+
+  void printMoveList() const { std::cout << moves_ << std::endl; }
 
 private:
   Bitboards bitboards_;
