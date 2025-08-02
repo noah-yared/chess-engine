@@ -34,7 +34,7 @@ std::ostream& operator<<(std::ostream& os, const MoveList& ml) {
   std::sort(ucis.begin(), ucis.end()); // sort the moves to make it easier to compare movelists
   int movesPrinted = 0;
   for (const auto& uci : ucis)
-    os << ((movesPrinted++ % 10 == 0) ? "\n   " : ", ") << uci;
-  os << " )\n";
+    os << (movesPrinted ? "," : "") << ((movesPrinted++ % 10 == 0) ? "\n   " : " ") << uci;
+  os << "\n)\n";
   return os;
 }
