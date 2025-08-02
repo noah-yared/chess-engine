@@ -15,11 +15,11 @@ class Evaluator {
   static int evaluateSide_v1(const Bitboards& bitboards, Color color); 
   static int evaluateSide_v2(const Bitboards& bitboards, Color color); 
   static int evaluateSide_v3(const Bitboards& bitboards, Color color); 
-public:
+
   static int evaluate_v1(const Bitboards& bitboards); 
   static int evaluate_v2(const Bitboards& bitboards);
   static int evaluate_v3(const Bitboards& bitboards);
-
+public:
   template<typename EvalType = EvalV3 /* default to V3, current fastest */>
   static int evaluate(const Bitboards& bitboards) {
     if constexpr(std::is_same_v<EvalType, EvalV1>) {

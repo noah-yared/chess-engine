@@ -78,3 +78,31 @@ target_link_libraries(engine_tests
 # Enable gtest to discover tests in test binary
 include(GoogleTest)
 gtest_discover_tests(engine_tests)
+
+# googlebenchmark for benchmarking
+FetchContent_Declare(
+  googlebenchmark
+  GIT_REPOSITORY https://github.com/google/benchmark.git
+  GIT_TAG v1.9.4
+)
+
+# Disable benchmark testing
+set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "Disable benchmark testing")
+FetchContent_MakeAvailable(googlebenchmark)
+
+# benchmarks
+foreach(bench_name move_gen move_apply search static_eval)
+  add_executable(bench_${bench_name}
+    bench/${bench_name}_benchmark.cpp
+  )
+  target_include_directories(bench_${bench_name}
+    PUBLIC
+      ${CMAKE_SOURCE_DIR}/bench/include
+  )
+  target_link_libraries(bench_${bench_name}
+    PRIVATE
+      benchmark::benchmark
+      benchmark::benchmark_main
+      engine_lib
+  )
+endforeach()

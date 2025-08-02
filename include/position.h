@@ -150,7 +150,8 @@ public:
   /////////////////////////
   [[nodiscard]] BoardStateSnapshot getStateSnapshot() const { return { .state = state_.extract(), .hash = hash_ }; }
   [[nodiscard]] u64 getHash() const { return hash_; } 
-  [[nodiscard]] int evaluation() const { return Evaluator::evaluate(bitboards_); }
+  template<typename EvalTag = EvalV3 /* default to V3, current fastest */>
+  [[nodiscard]] int evaluation() const { return Evaluator::evaluate<EvalTag>(bitboards_); }
   [[nodiscard]] std::optional<int> maybeEnpassantSquare() const { return state_.getEnpassantSquare(); }
   [[nodiscard]] int castlingRights() const { return state_.castlingBits(); }
   [[nodiscard]] std::vector<int> availableCastlingDests(Color color) const { return state_.availableCastlingDestinations(color); }
