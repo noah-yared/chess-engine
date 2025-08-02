@@ -40,6 +40,7 @@ public:
   // Observers
   [[nodiscard]] size_t size() const { return sz_; }
   [[nodiscard]] bool isEmpty() const { return sz_ == 0; }
+  [[nodiscard]] const MoveVariant& operator[](size_t i) noexcept { return moveBuffer_[i]; }
   
   // Complex search methods moved to source file
   [[nodiscard]] bool contains(const MoveVariant& move) const;
