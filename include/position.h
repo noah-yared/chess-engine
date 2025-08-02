@@ -14,7 +14,6 @@
 #include "board_state.h"
 #include "board_state_snapshot.h"
 #include "board_utils.h"
-#include "chess_traits.h"
 #include "constants.h"
 #include "directions.h"
 #include "evaluate.h"
@@ -24,6 +23,7 @@
 #include "precomputed_attacks.h"
 #include "state_update_helpers.h"
 #include "zobrist_hasher.h"
+
 
 class Position {
 public:
@@ -150,18 +150,7 @@ public:
   /////////////////////////
   [[nodiscard]] BoardStateSnapshot getStateSnapshot() const { return { .state = state_.extract(), .hash = hash_ }; }
   [[nodiscard]] u64 getHash() const { return hash_; } 
-
-  template<typename EvalType=EvalBaseline>
-  [[nodiscard]] int evaluation() const {
-    if constexpr(std::is_same_v<EvalType, EvalBaseline>) {
-      return Evaluator::evaluate(bitboards_);
-    } else if constexpr(std::is_same_v<EvalType, EvalV2>) {
-      return Evaluator::evaluate_v2(bitboards_);
-    } else {
-      return Evaluator::evaluate_v3(bitboards_);
-    }
-  }
-
+  [[nodiscard]] int evaluation() const { return Evaluator::evaluate(bitboards_); }
   [[nodiscard]] std::optional<int> maybeEnpassantSquare() const { return state_.getEnpassantSquare(); }
   [[nodiscard]] int castlingRights() const { return state_.castlingBits(); }
   [[nodiscard]] std::vector<int> availableCastlingDests(Color color) const { return state_.availableCastlingDestinations(color); }
