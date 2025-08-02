@@ -1,6 +1,8 @@
-#include "move_list.h"
 #include <algorithm>
 #include <unordered_set>
+#include <vector>
+
+#include "move_list.h"
 
 // Search methods
 bool MoveList::contains(const MoveVariant& move) const {
