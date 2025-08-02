@@ -5,13 +5,47 @@ project(engine VERSION 1.0)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# enable compile_commands.json for linters
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Generate compile_commands.json for linters" FORCE)
 
+# enable address sanitizer for debugging
 set(CMAKE_CXX_FLAGS_DEBUG "-fsanitize=address -fno-omit-frame-pointer")
 
 # Define ASIO_STANDALONE to use standalone Asio instead of Boost.Asio
 add_definitions(-DASIO_STANDALONE)
 
+# generate engine_config.h
+configure_file(${CMAKE_SOURCE_DIR}/include/engine_config.h.in ${CMAKE_BINARY_DIR}/engine_config.h)
+
+# engine library for reuse in other targets
+add_library(engine_lib STATIC
+  src/bitboards.cpp
+  src/board_state.cpp
+  src/evaluate.cpp
+  src/move_list.cpp
+  src/position.cpp
+)
+target_include_directories(engine_lib
+  PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+# engine binary
+add_executable(engine
+  src/main.cpp
+)
+target_include_directories(engine
+  PRIVATE
+    ${CMAKE_BINARY_DIR}
+    ${CMAKE_SOURCE_DIR}/external/crow/include
+    ${CMAKE_SOURCE_DIR}/external/asio/asio/include
+)
+target_link_libraries(engine
+  PRIVATE
+    engine_lib
+)
+
+# googletest for testing
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -22,29 +56,24 @@ FetchContent_Declare(
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
-configure_file(${CMAKE_SOURCE_DIR}/include/engine_config.h.in ${CMAKE_BINARY_DIR}/engine_config.h)
-
-add_executable(engine src/bitboards.cpp src/board_state.cpp src/evaluate.cpp src/main.cpp src/move_list.cpp src/position.cpp)
-
-target_include_directories(engine PUBLIC ${CMAKE_SOURCE_DIR}/include PRIVATE ${CMAKE_BINARY_DIR} PRIVATE ${CMAKE_SOURCE_DIR}/external/crow/include PRIVATE ${CMAKE_SOURCE_DIR}/external/asio/asio/include)
-
 enable_testing()
 
 add_executable(engine_tests # declare test binary
-    # test files
-    tests/check_detection_test.cpp
-    tests/move_apply_test.cpp
-    tests/move_undo_test.cpp
-    tests/move_generation_test.cpp
-    # src files
-    src/bitboards.cpp
-    src/board_state.cpp
-    # src/evaluate.cpp (not needed for tests)
-    src/move_list.cpp
-    src/position.cpp
+  # test files
+  tests/check_detection_test.cpp
+  tests/move_apply_test.cpp
+  tests/move_undo_test.cpp
+  tests/move_generation_test.cpp
 )
-target_include_directories(engine_tests PUBLIC ${CMAKE_SOURCE_DIR}/include PUBLIC ${CMAKE_SOURCE_DIR}/tests/include)
-target_link_libraries(engine_tests GTest::gtest_main) # provides basic main function to run tests
+target_include_directories(engine_tests
+  PUBLIC
+    ${CMAKE_SOURCE_DIR}/tests/include
+)
+target_link_libraries(engine_tests
+  PRIVATE
+    GTest::gtest_main
+    engine_lib
+) # provides basic main function to run tests
 
 # Enable gtest to discover tests in test binary
 include(GoogleTest)
