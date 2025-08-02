@@ -25,7 +25,6 @@
 #include "state_update_helpers.h"
 #include "zobrist_hasher.h"
 
-
 class Position {
 public:
   using RNG = std::mt19937_64; // random number generator for hashing function
@@ -151,7 +150,18 @@ public:
   /////////////////////////
   [[nodiscard]] BoardStateSnapshot getStateSnapshot() const { return { .state = state_.extract(), .hash = hash_ }; }
   [[nodiscard]] u64 getHash() const { return hash_; } 
-  [[nodiscard]] int evaluation() const { return Evaluator::evaluate(bitboards_); }
+
+  template<typename EvalType=EvalBaseline>
+  [[nodiscard]] int evaluation() const {
+    if constexpr(std::is_same_v<EvalType, EvalBaseline>) {
+      return Evaluator::evaluate(bitboards_);
+    } else if constexpr(std::is_same_v<EvalType, EvalV2>) {
+      return Evaluator::evaluate_v2(bitboards_);
+    } else {
+      return Evaluator::evaluate_v3(bitboards_);
+    }
+  }
+
   [[nodiscard]] std::optional<int> maybeEnpassantSquare() const { return state_.getEnpassantSquare(); }
   [[nodiscard]] int castlingRights() const { return state_.castlingBits(); }
   [[nodiscard]] std::vector<int> availableCastlingDests(Color color) const { return state_.availableCastlingDestinations(color); }

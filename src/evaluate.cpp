@@ -1,9 +1,11 @@
 #include "evaluate.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 
 #include "bitboards.h"
+#include "bit_utils.h"
 #include "constants.h"
 #include "pieces.h"
 #include "platform.h"
@@ -104,20 +106,41 @@ inline int mirrorSquare(int square) {
 inline int getMaterialValue(PieceType piece) {
   return PIECE_VALUES[static_cast<int>(piece)];
 }
+inline int getMaterialValue(int pieceKey) {
+  return PIECE_VALUES[pieceKey];
+}
 
 // Get the value of a square for a given piece type, side, and square
 inline int getPositionalValue(PieceType pType, int square, Color color) {
   int lookupSquare = (color == Color::WHITE) ? mirrorSquare(square) : square;
   return PIECE_SQUARES[static_cast<int>(pType)][lookupSquare];
 }
+template<Color color>
+inline int getPositionalValue(int pieceKey, int square) {
+  if constexpr (color == Color::WHITE) {
+    return PIECE_SQUARES[pieceKey][mirrorSquare(square)];
+  } else {
+    return PIECE_SQUARES[pieceKey][square];
+  }
+}
 } // unnamed namespace
 
-int Evaluator::evaluate(const Bitboards& bitboards) {
-  int eval = evaluateSide(bitboards, Color::WHITE) - evaluateSide(bitboards, Color::BLACK);
+int Evaluator::evaluate_v1(const Bitboards& bitboards) {
+  int eval = evaluateSide_v1(bitboards, Color::WHITE) - evaluateSide_v1(bitboards, Color::BLACK);
   return std::max(MIN_EVAL, std::min(MAX_EVAL, eval));
 }
 
-int Evaluator::evaluateSide(const Bitboards& bitboards, Color color) {
+int Evaluator::evaluate_v2(const Bitboards& bitboards) {
+  int eval = evaluateSide_v2(bitboards, Color::WHITE) - evaluateSide_v2(bitboards, Color::BLACK);
+  return std::max(MIN_EVAL, std::min(MAX_EVAL, eval));
+}
+
+int Evaluator::evaluate_v3(const Bitboards& bitboards) {
+  int eval = evaluateSide_v3(bitboards, Color::WHITE) - evaluateSide_v3(bitboards, Color::BLACK);
+  return std::max(MIN_EVAL, std::min(MAX_EVAL, eval));
+}
+
+int Evaluator::evaluateSide_v1(const Bitboards& bitboards, Color color) {
   int score = 0;
   u64 bitmask = 1ULL, bb = bitboards.allyBB(color);
   for (int square = 0; square < 64; ++square, bitmask <<= 1)
@@ -126,6 +149,34 @@ int Evaluator::evaluateSide(const Bitboards& bitboards, Color color) {
       score += getMaterialValue(pType) + getPositionalValue(pType, square, color);
     }
   return score;
+}
+
+int Evaluator::evaluateSide_v2(const Bitboards& bitboards, Color color) {
+  return BitUtils::accumulateBits(bitboards.allyBB(color), [&, color](int score, int square) { 
+    PieceType pType = bitboards.getPieceType(square, color);
+    return score + getMaterialValue(pType) + getPositionalValue(pType, square, color);
+  }, 0);
+}
+
+int Evaluator::evaluateSide_v3(const Bitboards& bitboards, Color color) {
+  struct AccType { int pKey = 0, score = 0; };
+  if (color == Color::WHITE) {
+    return std::accumulate(bitboards.wStart(), bitboards.wEnd(), AccType{}, [](AccType acc, u64 bb) -> AccType {
+      return {
+        acc.pKey + 1, BitUtils::accumulateBits<int>(bb, [pKey=acc.pKey](int score, int square) {
+          return score + getMaterialValue(pKey) + getPositionalValue<Color::WHITE>(pKey, square);
+        }, acc.score)
+      };
+    }).score;
+  } else {
+    return std::accumulate(bitboards.bStart(), bitboards.bEnd(), AccType{}, [](AccType acc, u64 bb) -> AccType {
+      return {
+        acc.pKey + 1, BitUtils::accumulateBits<int>(bb, [pKey=acc.pKey](int score, int square) {
+          return score + getMaterialValue(pKey) + getPositionalValue<Color::BLACK>(pKey, square);
+        }, acc.score)
+      };
+    }).score;
+  }
 }
 
 /* 
