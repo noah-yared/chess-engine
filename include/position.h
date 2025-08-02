@@ -320,15 +320,13 @@ private:
   // Raw controlled squares (all squares piece can attack, including allies)
   template<PieceType pType>
   u64 rawControlledSquares(Color color) const {
-    return BitUtils::accumulateBits<u64>(getPieceBitboard(pType, color), [&](u64 targets, int lsb) {
-      return targets | attackedSquares<pType>(lsb, color);
-    });
-  }
-
-  // Specializations for rawControlledSquares
-  template<>
-  inline u64 rawControlledSquares<PieceType::PAWN>(Color color) const {
-    return squaresAttackedByPawns(color);
+    if constexpr (pType == PieceType::PAWN) {
+      return squaresAttackedByPawns(color);
+    } else {
+      return BitUtils::accumulateBits<u64>(getPieceBitboard(pType, color), [&](u64 targets, int lsb) {
+        return targets | attackedSquares<pType>(lsb, color);
+      });
+    }
   }
 
   inline u64 singlePawnPushTargets(Color color) const {

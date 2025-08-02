@@ -66,21 +66,21 @@ private:
 
   template<MoveType mType>
   static inline u64 enpassantSquareMask(const Move<mType> move, std::optional<int> maybePreviousEnpassantSq) {
-    return maybePreviousEnpassantSq ? zobrist_.enpassantKeys[*maybePreviousEnpassantSq % RANKS] : 0ULL;
-  }
-  template<>
-  static inline u64 enpassantSquareMask<MoveType::DoublePawnPush>(const Move<MoveType::DoublePawnPush> move, std::optional<int> maybePreviousEnpassantSq) {
-    return (maybePreviousEnpassantSq ? zobrist_.enpassantKeys[*maybePreviousEnpassantSq % RANKS] : 0ULL)
-       xor zobrist_.enpassantKeys[((move.start() + move.end()) / 2) % RANKS];
+    if constexpr(mType == MoveType::DoublePawnPush) {
+      return (maybePreviousEnpassantSq ? zobrist_.enpassantKeys[*maybePreviousEnpassantSq % RANKS] : 0ULL)
+         xor zobrist_.enpassantKeys[((move.start() + move.end()) / 2) % RANKS];
+    } else {
+      return maybePreviousEnpassantSq ? zobrist_.enpassantKeys[*maybePreviousEnpassantSq % RANKS] : 0ULL;
+    }
   }
 
   template<MoveType mType>
   static inline u64 castlingPrivilegesMask(int oldCastlingBits, int newCastlingBits) {
-    return 0ULL;
-  }
-  template<>
-  static inline u64 castlingPrivilegesMask<MoveType::Castle>(int oldCastlingBits, int newCastlingBits) {
-    return zobrist_.castlingKeys[oldCastlingBits] ^ zobrist_.castlingKeys[newCastlingBits];
+    if constexpr (mType == MoveType::Castle) {
+      return zobrist_.castlingKeys[oldCastlingBits] ^ zobrist_.castlingKeys[newCastlingBits];
+    } else {
+      return 0ULL;
+    }
   }
 
   template<MoveType mType>
