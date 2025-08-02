@@ -29,19 +29,19 @@ class Bitboards {
 
   template <typename InputIt>
   requires std::input_iterator<InputIt> && std::is_same_v<std::iter_value_t<InputIt>, u64>
-  [[nodiscard]] static constexpr u64 combine(InputIt first, InputIt last) noexcept {
+  [[nodiscard]] static u64 combine(InputIt first, InputIt last) noexcept {
     return (first == last) ? 0ULL : std::accumulate(first, last, 0ULL, [](u64 acc, u64 bb) { return acc | bb; });
   }
 
   template <typename InputIt>
   requires std::input_iterator<InputIt> && std::is_same_v<std::iter_value_t<InputIt>, u64>
-  [[nodiscard]] static constexpr PieceType findPiece(InputIt first, InputIt last, u64 mask) noexcept {
+  [[nodiscard]] static PieceType findPiece(InputIt first, InputIt last, u64 mask) noexcept {
     auto found = std::find_if(first, last, [mask](u64 bb) -> bool { return bb & mask; });
     return found != last ? PieceType(std::distance(first, found) % NUM_PIECE_TYPES) : PieceType::NONE;
   }
 
-  [[nodiscard]] constexpr int wKing() const noexcept { return BitUtils::ctz(bb(PieceType::KING, Color::WHITE)); }
-  [[nodiscard]] constexpr int bKing() const noexcept { return BitUtils::ctz(bb(PieceType::KING, Color::BLACK)); }
+  [[nodiscard]] int wKing() const noexcept { return BitUtils::ctz(bb(PieceType::KING, Color::WHITE)); }
+  [[nodiscard]] int bKing() const noexcept { return BitUtils::ctz(bb(PieceType::KING, Color::BLACK)); }
 
   [[nodiscard]] static inline Color indexToColor(int index) {
     return Color(index >= NUM_PIECE_TYPES);
@@ -84,16 +84,16 @@ class Bitboards {
 
   // Iterators for all bitboards
   using iterator = std::array<u64, NUM_BITBOARDS>::const_iterator;
-  [[nodiscard]] constexpr iterator begin() const noexcept { return bbs_.begin(); }
-  [[nodiscard]] constexpr iterator end() const noexcept { return bbs_.end(); }
+  [[nodiscard]] iterator begin() const noexcept { return bbs_.begin(); }
+  [[nodiscard]] iterator end() const noexcept { return bbs_.end(); }
 
   // Iterators for black bitboards
-  [[nodiscard]] constexpr iterator bStart() const noexcept { return bbs_.begin(); }
-  [[nodiscard]] constexpr iterator bEnd() const noexcept { return std::next(bbs_.begin(), NUM_PIECE_TYPES); }
+  [[nodiscard]] iterator bStart() const noexcept { return bbs_.begin(); }
+  [[nodiscard]] iterator bEnd() const noexcept { return std::next(bbs_.begin(), NUM_PIECE_TYPES); }
 
   // Iterators for white bitboards
-  [[nodiscard]] constexpr iterator wStart() const noexcept { return bEnd(); }
-  [[nodiscard]] constexpr iterator wEnd() const noexcept { return end(); }
+  [[nodiscard]] iterator wStart() const noexcept { return bEnd(); }
+  [[nodiscard]] iterator wEnd() const noexcept { return end(); }
 
   // King square retrieval
   [[nodiscard]] int king(Color c) const noexcept { return c == Color::WHITE ? wKing() : bKing(); }
@@ -129,8 +129,8 @@ class Bitboards {
     return whiteBB_ & (1ULL << square) ? Color::WHITE : Color::BLACK;
   }
 
-  [[nodiscard]] constexpr bool operator==(const Bitboards& other) const noexcept { return bbs_ == other.bbs_; }
-  [[nodiscard]] constexpr bool operator!=(const Bitboards& other) const noexcept { return bbs_ != other.bbs_; }
+  [[nodiscard]] bool operator==(const Bitboards& other) const noexcept { return bbs_ == other.bbs_; }
+  [[nodiscard]] bool operator!=(const Bitboards& other) const noexcept { return bbs_ != other.bbs_; }
 
   // Complex methods moved to source file
   [[nodiscard]] bool isConsistent() const noexcept;
