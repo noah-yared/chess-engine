@@ -3,12 +3,12 @@
 #include <algorithm>
 #include <optional>
 #include <random>
-#include <vector>
 
 #include "bitboards.h"
 #include "board_state.h"
 #include "delta.h"
 #include "move.h"
+#include "static_vector.h"
 #include "zobrist.h"
 
 template<typename RNG>
@@ -46,8 +46,8 @@ public:
     return hash;
   }
 
-  template<MoveType mType>
-  static u64 getHashUpdateMask(const Move<mType> move, const std::vector<Delta>& deltas, const std::optional<int> maybePreviousEnpassantSq, int oldCastlingBits, int newCastlingBits) {
+  template<MoveType mType, typename Container>
+  static u64 getHashUpdateMask(const Move<mType> move, const Container& deltas, const std::optional<int> maybePreviousEnpassantSq, int oldCastlingBits, int newCastlingBits) {
     return pieceSquareDeltasMask(deltas)
        xor castlingPrivilegesMask<mType>(oldCastlingBits, newCastlingBits)
        xor enpassantSquareMask<mType>(move, maybePreviousEnpassantSq)
@@ -57,7 +57,8 @@ public:
 private:
   static inline Zobrist<RNG> zobrist_{};
 
-  static inline u64 pieceSquareDeltasMask(const std::vector<Delta>& deltas) {
+  template<typename Container>
+  static inline u64 pieceSquareDeltasMask(const Container& deltas) {
     u64 mask = 0ULL;
     for (const auto [bbKey, square] : deltas)
       mask ^= zobrist_.pieceKeys[bbKey][square]; 

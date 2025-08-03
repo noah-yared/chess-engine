@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cassert>
-
 #include <concepts>
 #include <optional>
 #include <random>
@@ -22,6 +21,7 @@
 #include "piece_square_deltas.h"
 #include "precomputed_attacks.h"
 #include "state_update_helpers.h"
+#include "static_vector.h"
 #include "zobrist_hasher.h"
 
 
@@ -77,7 +77,7 @@ public:
   /////////////////////////
   template<MoveType mType>
   void applyMove(const Move<mType> move) {
-    const auto deltas = pieceSquareDeltas<mType>(move);
+    const auto deltas = PieceSquareDeltas<mType>::generate(move);
     updateBitboards<mType>(move, deltas);
     auto extractedPrevState = state_.extract();
     updateState<mType>(move);
@@ -248,15 +248,15 @@ private:
   /////////////////////////
   // State Updates       //
   /////////////////////////
-  template<MoveType mType>
-  void updateBitboards(const Move<mType> move, const std::vector<Delta>& deltas) {
+  template<MoveType mType, typename Container>
+  void updateBitboards(const Move<mType> move, const Container& deltas) {
     for (const auto [key, square] : deltas)
       bitboards_.togglePieceSquare(key, square);
   }
   
   template<MoveType mType>
   void revertBitboards(const Move<mType> move) {
-    for (const auto [key, square] : pieceSquareDeltas<mType>(move))
+    for (const auto [key, square] : PieceSquareDeltas<mType>::generate(move))
       bitboards_.togglePieceSquare(key, square);
   }
 
@@ -267,8 +267,8 @@ private:
     updateTurn<mType>(move, state_);
   }
 
-  template<MoveType mType>
-  void updateHash(const Move<mType> move, const std::vector<Delta>& deltas, const BoardState prevState,
+  template<MoveType mType, typename Container>
+  void updateHash(const Move<mType> move, const Container& deltas, const BoardState prevState,
       const BoardState newState) {
     hash_ ^= ZobristHasher<RNG>::getHashUpdateMask<mType>(move, deltas, prevState.getEnpassantSquare(),
         prevState.castlingBits(), newState.castlingBits());
