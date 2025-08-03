@@ -109,11 +109,11 @@ struct Move : public MoveBase<mType> {
 template<>
 struct Move<MoveType::Promotion> : public MoveBase<MoveType::Promotion> {
   // default constructor, copy constructor, and copy assignment operator
-  Move<MoveType::Promotion>() = default;
-  Move<MoveType::Promotion>(const Move<MoveType::Promotion>&) = default;
-  Move<MoveType::Promotion>& operator=(const Move<MoveType::Promotion>&) = default;
+  Move() = default;
+  Move(const Move&) = default;
+  Move& operator=(const Move&) = default;
 
-  Move<MoveType::Promotion>(unsigned int start, unsigned int end, Color side, PieceType moved, std::optional<PieceType> captured=std::nullopt)
+  Move(unsigned int start, unsigned int end, Color side, PieceType moved, std::optional<PieceType> captured=std::nullopt)
     : MoveBase<MoveType::Promotion>(start, end, side, moved, captured) {};
 
   // promote to queen, save time searching game tree for different
@@ -125,11 +125,11 @@ struct Move<MoveType::Promotion> : public MoveBase<MoveType::Promotion> {
 template<>
 struct Move<MoveType::Castle> : public MoveBase<MoveType::Castle> {
   // default constructor, copy constructor, and copy assignment operator
-  Move<MoveType::Castle>() = default;
-  Move<MoveType::Castle>(const Move<MoveType::Castle>&) = default;
-  Move<MoveType::Castle>& operator=(const Move<MoveType::Castle>&) = default;
+  Move() = default;
+  Move(const Move&) = default;
+  Move& operator=(const Move&) = default;
 
-  Move<MoveType::Castle>(unsigned int start, unsigned int end, Color side, PieceType moved, std::optional<PieceType> captured=std::nullopt)
+  Move(unsigned int start, unsigned int end, Color side, PieceType moved, std::optional<PieceType> captured=std::nullopt)
     : MoveBase<MoveType::Castle>(start, end, side, moved, captured) {};
 
   // branchless optimization
@@ -144,11 +144,11 @@ struct Move<MoveType::Castle> : public MoveBase<MoveType::Castle> {
 template<>
 struct Move<MoveType::Enpassant> : public MoveBase<MoveType::Enpassant> {
   // default constructor, copy constructor, and copy assignment operator
-  Move<MoveType::Enpassant>() = default;
-  Move<MoveType::Enpassant>(const Move<MoveType::Enpassant>&) = default;
-  Move<MoveType::Enpassant>& operator=(const Move<MoveType::Enpassant>&) = default;
+  Move() = default;
+  Move(const Move&) = default;
+  Move& operator=(const Move&) = default;
 
-  Move<MoveType::Enpassant>(unsigned int start, unsigned int end, Color side, PieceType moved, std::optional<PieceType> captured=std::nullopt)
+  Move(unsigned int start, unsigned int end, Color side, PieceType moved, std::optional<PieceType> captured=std::nullopt)
     : MoveBase<MoveType::Enpassant>(start, end, side, moved, captured) {};
 
   [[nodiscard]] int enpassantSquare() const { return (start() & 56) + (end() & 7); }
@@ -158,11 +158,11 @@ struct Move<MoveType::Enpassant> : public MoveBase<MoveType::Enpassant> {
 template<>
 struct Move<MoveType::DoublePawnPush> : public MoveBase<MoveType::DoublePawnPush> {
   // default constructor, copy constructor, and copy assignment operator
-  Move<MoveType::DoublePawnPush>() = default;
-  Move<MoveType::DoublePawnPush>(const Move<MoveType::DoublePawnPush>&) = default;
-  Move<MoveType::DoublePawnPush>& operator=(const Move<MoveType::DoublePawnPush>&) = default;
+  Move() = default;
+  Move(const Move&) = default;
+  Move& operator=(const Move&) = default;
 
-  Move<MoveType::DoublePawnPush>(unsigned int start, unsigned int end, Color side, PieceType moved, std::optional<PieceType> captured=std::nullopt)
+  Move(unsigned int start, unsigned int end, Color side, PieceType moved, std::optional<PieceType> captured=std::nullopt)
     : MoveBase<MoveType::DoublePawnPush>(start, end, side, moved, captured) {};
 
   [[nodiscard]] int enpassantSquare() const { return (start() + end()) / 2; }
