@@ -140,9 +140,11 @@ public:
 
   template<MoveType mType>
   bool doesMoveExposeAllyKing(const Move<mType> move) const {
-    Position tmp = *this;
-    tmp.applyMove(move);
-    return tmp.isKingInCheck(move.side());
+    auto snapshot = getStateSnapshot();
+    const_cast<Position*>(this)->applyMove(move);
+    bool isKingChecked = this->isKingInCheck(move.side()); 
+    const_cast<Position*>(this)->undoMove(move, snapshot);
+    return isKingChecked;
   }
 
   /////////////////////////
