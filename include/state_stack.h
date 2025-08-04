@@ -13,14 +13,14 @@ class StateStack {
   size_t ply_;
 
  public:
-  StateStack(): ply_{0} {};
+  StateStack() noexcept : ply_{0} {};
 
   // observers
-  [[nodiscard]] inline bool isEmpty() const { return ply_ == 0; }
-  [[nodiscard]] inline StateType top() const { return stack_.at(ply_-1); }
+  [[nodiscard]] inline bool isEmpty() const noexcept { return ply_ == 0; }
+  [[nodiscard]] inline StateType top() const noexcept { return stack_.at(ply_-1); }
 
   // mutators
-  inline void clear() { ply_ = 0; }
-  inline void push(StateType oldState) { stack_.at(ply_++) = oldState; }
-  [[nodiscard]] inline StateType pop() { return stack_.at(--ply_); }
+  inline void clear() noexcept { ply_ = 0; }
+  inline void push(StateType oldState) noexcept { stack_.at(ply_++) = oldState; }
+  [[nodiscard]] inline StateType pop() noexcept { return stack_.at(--ply_); }
 };

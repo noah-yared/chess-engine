@@ -16,7 +16,7 @@ class ZobristHasher {
 public:
   // explicit ZobristHasher(const Zobrist<RNG>& zobrist): zobrist_{zobrist} {};
 
-  static constexpr u64 initialZobristHash() {
+  static constexpr u64 initialZobristHash() noexcept {
     u64 hash = 0ull;
     // apply piece keys
     for (int bbKey = 0; bbKey < NUM_BITBOARDS; bbKey++)
@@ -28,7 +28,7 @@ public:
     return hash;
   }
 
-  static u64 computeZobristHash(const Bitboards& bitboards, const BoardState state) {
+  static u64 computeZobristHash(const Bitboards& bitboards, const BoardState state) noexcept {
     u64 hash = 0ull;
     // apply piece keys
     for (int bbKey = 0; bbKey < NUM_BITBOARDS; bbKey++)
@@ -47,7 +47,7 @@ public:
   }
 
   template<MoveType mType, typename Container>
-  static u64 getHashUpdateMask(const Move<mType> move, const Container& deltas, const std::optional<int> maybePreviousEnpassantSq, int oldCastlingBits, int newCastlingBits) {
+  static u64 getHashUpdateMask(const Move<mType> move, const Container& deltas, const std::optional<int> maybePreviousEnpassantSq, int oldCastlingBits, int newCastlingBits) noexcept {
     return pieceSquareDeltasMask(deltas)
        xor castlingPrivilegesMask<mType>(oldCastlingBits, newCastlingBits)
        xor enpassantSquareMask<mType>(move, maybePreviousEnpassantSq)
@@ -58,7 +58,7 @@ private:
   static inline Zobrist<RNG> zobrist_{};
 
   template<typename Container>
-  static inline u64 pieceSquareDeltasMask(const Container& deltas) {
+  static inline u64 pieceSquareDeltasMask(const Container& deltas) noexcept {
     u64 mask = 0ULL;
     for (const auto [bbKey, square] : deltas)
       mask ^= zobrist_.pieceKeys[bbKey][square]; 
@@ -66,7 +66,7 @@ private:
   }
 
   template<MoveType mType>
-  static inline u64 enpassantSquareMask(const Move<mType> move, std::optional<int> maybePreviousEnpassantSq) {
+  static inline u64 enpassantSquareMask(const Move<mType> move, std::optional<int> maybePreviousEnpassantSq) noexcept {
     if constexpr(mType == MoveType::DoublePawnPush) {
       return (maybePreviousEnpassantSq ? zobrist_.enpassantKeys[*maybePreviousEnpassantSq % RANKS] : 0ULL)
          xor zobrist_.enpassantKeys[((move.start() + move.end()) / 2) % RANKS];
@@ -76,7 +76,7 @@ private:
   }
 
   template<MoveType mType>
-  static inline u64 castlingPrivilegesMask(int oldCastlingBits, int newCastlingBits) {
+  static inline u64 castlingPrivilegesMask(int oldCastlingBits, int newCastlingBits) noexcept {
     if constexpr (mType == MoveType::Castle) {
       return zobrist_.castlingKeys[oldCastlingBits] ^ zobrist_.castlingKeys[newCastlingBits];
     } else {
@@ -85,7 +85,7 @@ private:
   }
 
   template<MoveType mType>
-  static inline u64 turnMask() {
+  static inline u64 turnMask() noexcept {
     return zobrist_.turnKey;
   }
 };

@@ -6,7 +6,7 @@
 #include "bitboards.h"
 
 // Complex constructors
-Bitboards::Bitboards(const std::string& sBoard, FromAsciiBoard) : bbs_{}, whiteBB_{}, blackBB_{} {
+Bitboards::Bitboards(const std::string& sBoard, FromAsciiBoard) noexcept : bbs_{}, whiteBB_{}, blackBB_{} {
   const std::string pieceString = "prnbqkPRNBQK";
   int bit = 63;
   for (char c : sBoard) {
@@ -16,11 +16,10 @@ Bitboards::Bitboards(const std::string& sBoard, FromAsciiBoard) : bbs_{}, whiteB
       togglePieceSquare(static_cast<int>(pos), bit);
     --bit;
   }
-  if (bit != -1)
-    throw std::runtime_error("Invalid ascii board format passed in! Make sure to specify all squares on the board!");
+  assert(bit == -1 && "Invalid ascii board format passed in! Make sure to specify all squares on the board!");
 }
 
-Bitboards::Bitboards(const std::string& fen, FromFEN) : bbs_{}, whiteBB_{}, blackBB_{} {
+Bitboards::Bitboards(const std::string& fen, FromFEN) noexcept : bbs_{}, whiteBB_{}, blackBB_{} {
   const std::string pieceString = "prnbqkPRNBQK";
   const std::string fenPieces = fen.substr(0, fen.find_first_of(' '));
   int bit = 63;
@@ -48,7 +47,7 @@ bool Bitboards::isConsistent() const noexcept {
   return true;
 }
 
-std::string Bitboards::parsePiecePlacement() const {
+std::string Bitboards::parsePiecePlacement() const noexcept {
   std::stringstream ss;
   const std::string pieceStr = "prnbqkPRNBQK";
   for (int bit = 63, consecutiveEmpty = 0; bit; --bit) {
@@ -71,7 +70,7 @@ std::string Bitboards::parsePiecePlacement() const {
   return ss.str();
 }
 
-std::string Bitboards::toString() const {
+std::string Bitboards::toString() const noexcept {
   const std::string pieceString = "prnbqkPRNBQK";
   std::stringstream ss;
   for (int r = 7; r >= 0; --r) {
@@ -79,8 +78,7 @@ std::string Bitboards::toString() const {
     for (int c = 7; c >= 0; --c) {
       int sq = r * FILES + c;
       if (auto pType = getPieceType(sq); pType != PieceType::NONE) {
-        if (pType > PieceType::KING)
-          throw std::runtime_error("Invalid piece type");
+        assert(pType <= PiecType::KING && "Invalid piece type!");
         bool isWhite = whiteBB() & (1ULL << sq);
         ss << pieceString[pieceToKey(pType, isWhite ? Color::WHITE : Color::BLACK)];
       } else {

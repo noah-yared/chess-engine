@@ -30,20 +30,20 @@ class Bitboards {
   template <typename InputIt>
   requires std::input_iterator<InputIt> && std::is_same_v<std::iter_value_t<InputIt>, u64>
   [[nodiscard]] static u64 combine(InputIt first, InputIt last) noexcept {
-    return (first == last) ? 0ULL : std::accumulate(first, last, 0ULL, [](u64 acc, u64 bb) { return acc | bb; });
+    return (first == last) ? 0ULL : std::accumulate(first, last, 0ULL, [](u64 acc, u64 bb) noexcept { return acc | bb; });
   }
 
   template <typename InputIt>
   requires std::input_iterator<InputIt> && std::is_same_v<std::iter_value_t<InputIt>, u64>
   [[nodiscard]] static PieceType findPiece(InputIt first, InputIt last, u64 mask) noexcept {
-    auto found = std::find_if(first, last, [mask](u64 bb) -> bool { return bb & mask; });
+    auto found = std::find_if(first, last, [mask](u64 bb) noexcept -> bool { return bb & mask; });
     return found != last ? PieceType(std::distance(first, found) % NUM_PIECE_TYPES) : PieceType::NONE;
   }
 
   [[nodiscard]] int wKing() const noexcept { return BitUtils::ctz(bb(PieceType::KING, Color::WHITE)); }
   [[nodiscard]] int bKing() const noexcept { return BitUtils::ctz(bb(PieceType::KING, Color::BLACK)); }
 
-  [[nodiscard]] static inline Color indexToColor(int index) {
+  [[nodiscard]] static inline Color indexToColor(int index) noexcept {
     return Color(index >= NUM_PIECE_TYPES);
   }
 
@@ -54,7 +54,7 @@ class Bitboards {
     whiteBB_ = combine(wStart(), wEnd());
     blackBB_ = combine(bStart(), bEnd());
   }
-  explicit Bitboards(u64* const bbs) {
+  explicit Bitboards(u64* const bbs) noexcept {
     assert(bbs != nullptr);
     std::copy(bbs, bbs + NUM_BITBOARDS, bbs_.begin());
     whiteBB_ = combine(wStart(), wEnd());
@@ -62,14 +62,14 @@ class Bitboards {
   };
 
   // Complex constructors moved to source file
-  explicit Bitboards(const std::string& sBoard, FromAsciiBoard);
-  explicit Bitboards(const std::string& fen, FromFEN);
+  explicit Bitboards(const std::string& sBoard, FromAsciiBoard) noexcept;
+  explicit Bitboards(const std::string& fen, FromFEN) noexcept;
 
-  static Color keyToColor(int key) {
+  static Color keyToColor(int key) noexcept {
     return Color(key >= NUM_PIECE_TYPES);
   }
 
-  static int pieceToKey(PieceType t, Color c) {
+  static int pieceToKey(PieceType t, Color c) noexcept {
     return NUM_PIECE_TYPES * static_cast<int>(c) + static_cast<int>(t);
   }
 
@@ -134,6 +134,6 @@ class Bitboards {
 
   // Complex methods moved to source file
   [[nodiscard]] bool isConsistent() const noexcept;
-  [[nodiscard]] std::string parsePiecePlacement() const;
-  [[nodiscard]] std::string toString() const;
+  [[nodiscard]] std::string parsePiecePlacement() const noexcept;
+  [[nodiscard]] std::string toString() const noexcept;
 };

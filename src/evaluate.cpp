@@ -98,25 +98,25 @@ inline constexpr std::array<std::array<int, 64>, 6> PIECE_SQUARES = {{
 }};
 
 // mirror square for black
-inline int mirrorSquare(int square) {
+inline int mirrorSquare(int square) noexcept {
   return 56 + (square & 7) - (square & 56);
 }
 
 // Get the value of a piece for a given piece type
-inline int getMaterialValue(PieceType piece) {
+inline int getMaterialValue(PieceType piece) noexcept {
   return PIECE_VALUES[static_cast<int>(piece)];
 }
-inline int getMaterialValue(int pieceKey) {
+inline int getMaterialValue(int pieceKey) noexcept {
   return PIECE_VALUES[pieceKey];
 }
 
 // Get the value of a square for a given piece type, side, and square
-inline int getPositionalValue(PieceType pType, int square, Color color) {
+inline int getPositionalValue(PieceType pType, int square, Color color) noexcept {
   int lookupSquare = (color == Color::WHITE) ? mirrorSquare(square) : square;
   return PIECE_SQUARES[static_cast<int>(pType)][lookupSquare];
 }
 template<Color color>
-inline int getPositionalValue(int pieceKey, int square) {
+inline int getPositionalValue(int pieceKey, int square) noexcept {
   if constexpr (color == Color::WHITE) {
     return PIECE_SQUARES[pieceKey][mirrorSquare(square)];
   } else {
@@ -125,22 +125,22 @@ inline int getPositionalValue(int pieceKey, int square) {
 }
 } // unnamed namespace
 
-int Evaluator::evaluate_v1(const Bitboards& bitboards) {
+int Evaluator::evaluate_v1(const Bitboards& bitboards) noexcept {
   int eval = evaluateSide_v1(bitboards, Color::WHITE) - evaluateSide_v1(bitboards, Color::BLACK);
   return std::max(MIN_EVAL, std::min(MAX_EVAL, eval));
 }
 
-int Evaluator::evaluate_v2(const Bitboards& bitboards) {
+int Evaluator::evaluate_v2(const Bitboards& bitboards) noexcept {
   int eval = evaluateSide_v2(bitboards, Color::WHITE) - evaluateSide_v2(bitboards, Color::BLACK);
   return std::max(MIN_EVAL, std::min(MAX_EVAL, eval));
 }
 
-int Evaluator::evaluate_v3(const Bitboards& bitboards) {
+int Evaluator::evaluate_v3(const Bitboards& bitboards) noexcept {
   int eval = evaluateSide_v3(bitboards, Color::WHITE) - evaluateSide_v3(bitboards, Color::BLACK);
   return std::max(MIN_EVAL, std::min(MAX_EVAL, eval));
 }
 
-int Evaluator::evaluateSide_v1(const Bitboards& bitboards, Color color) {
+int Evaluator::evaluateSide_v1(const Bitboards& bitboards, Color color) noexcept {
   int score = 0;
   u64 bitmask = 1ULL, bb = bitboards.allyBB(color);
   for (int square = 0; square < 64; ++square, bitmask <<= 1)
@@ -151,27 +151,27 @@ int Evaluator::evaluateSide_v1(const Bitboards& bitboards, Color color) {
   return score;
 }
 
-int Evaluator::evaluateSide_v2(const Bitboards& bitboards, Color color) {
-  return BitUtils::accumulateBits(bitboards.allyBB(color), [&, color](int score, int square) { 
+int Evaluator::evaluateSide_v2(const Bitboards& bitboards, Color color) noexcept {
+  return BitUtils::accumulateBits(bitboards.allyBB(color), [&, color](int score, int square) noexcept { 
     PieceType pType = bitboards.getPieceType(square, color);
     return score + getMaterialValue(pType) + getPositionalValue(pType, square, color);
   }, 0);
 }
 
-int Evaluator::evaluateSide_v3(const Bitboards& bitboards, Color color) {
+int Evaluator::evaluateSide_v3(const Bitboards& bitboards, Color color) noexcept {
   struct AccType { int pKey = 0, score = 0; };
   if (color == Color::WHITE) {
-    return std::accumulate(bitboards.wStart(), bitboards.wEnd(), AccType{}, [](AccType acc, u64 bb) -> AccType {
+    return std::accumulate(bitboards.wStart(), bitboards.wEnd(), AccType{}, [](AccType acc, u64 bb) noexcept -> AccType {
       return {
-        acc.pKey + 1, BitUtils::accumulateBits<int>(bb, [pKey=acc.pKey](int score, int square) {
+        acc.pKey + 1, BitUtils::accumulateBits<int>(bb, [pKey=acc.pKey](int score, int square) noexcept {
           return score + getMaterialValue(pKey) + getPositionalValue<Color::WHITE>(pKey, square);
         }, acc.score)
       };
     }).score;
   } else {
-    return std::accumulate(bitboards.bStart(), bitboards.bEnd(), AccType{}, [](AccType acc, u64 bb) -> AccType {
+    return std::accumulate(bitboards.bStart(), bitboards.bEnd(), AccType{}, [](AccType acc, u64 bb) noexcept -> AccType {
       return {
-        acc.pKey + 1, BitUtils::accumulateBits<int>(bb, [pKey=acc.pKey](int score, int square) {
+        acc.pKey + 1, BitUtils::accumulateBits<int>(bb, [pKey=acc.pKey](int score, int square) noexcept {
           return score + getMaterialValue(pKey) + getPositionalValue<Color::BLACK>(pKey, square);
         }, acc.score)
       };

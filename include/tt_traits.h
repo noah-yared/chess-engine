@@ -112,7 +112,7 @@ struct IndexToField<5> {
 
 // Verify all field traits are correctly defined
 template<size_t... Is>
-constexpr bool verifyTraits(std::index_sequence<Is...>) {
+constexpr bool verifyTraits(std::index_sequence<Is...>) noexcept {
   return (... && (FieldTraits<IndexToField<Is>::field>::index == Is));
 }
 
@@ -124,10 +124,10 @@ struct FieldData {
   static constexpr Field field_type = field;
   using value_type = T;
 
-  constexpr explicit FieldData(T value) : value{value} {};
+  constexpr explicit FieldData(T value) noexcept : value{value} {};
 
-  constexpr T get() const { return value; }
-  constexpr void set(T value) { this->value = value; }
+  constexpr T get() const noexcept { return value; }
+  constexpr void set(T value) noexcept { this->value = value; }
 
   private:
     T value;
@@ -137,10 +137,10 @@ struct FieldData {
 
 // Helper functions
 template<std::integral T, int N, size_t ...Is>
-static constexpr std::array<T, N+1> generateMasks(std::index_sequence<Is...>) {
+static constexpr std::array<T, N+1> generateMasks(std::index_sequence<Is...>) noexcept {
   T fullMask = std::numeric_limits<T>::max();
   return { static_cast<T>(((Is == 0) ? fullMask : (fullMask >> (N - Is))))... };
 }
 
 template<std::integral T, int N = (sizeof(T) * 8)>
-static constexpr std::array<T, N+1> masks() { return generateMasks<T, N>(std::make_index_sequence<N+1>{}); }
+static constexpr std::array<T, N+1> masks() noexcept { return generateMasks<T, N>(std::make_index_sequence<N+1>{}); }

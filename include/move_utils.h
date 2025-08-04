@@ -5,7 +5,7 @@
 #include "position.h"
 
 // uses current state of instance position object pos
-[[nodiscard]] MoveVariant uciToMove(const std::string& uci, const Position& pos) {
+[[nodiscard]] MoveVariant uciToMove(const std::string& uci, const Position& pos) noexcept {
   constexpr auto normal = MoveType::Normal;
   constexpr auto promotion = MoveType::Promotion;
   constexpr auto doublePush = MoveType::DoublePawnPush;

@@ -10,7 +10,7 @@
 enum class Direction { W, E, N, S, NE, SW, NW, SE, };
 
 
-inline Direction ForwardDirection(Color c) {
+inline Direction ForwardDirection(Color c) noexcept {
   constexpr std::array<Direction, 2> forwardDirections = {
     Direction::S,
     Direction::N,
@@ -29,19 +29,19 @@ private:
   }};
 
 public:
-  static constexpr std::pair<Direction, Direction> pawnAttackLanes(Color c) {
+  static constexpr std::pair<Direction, Direction> pawnAttackLanes(Color c) noexcept {
     constexpr std::array<std::pair<Direction, Direction>, 2> attackDirections = {
       std::pair{ Direction::SW, Direction::SE },
       std::pair{ Direction::NW, Direction::NE },   
     }; 
     return attackDirections[c == Color::WHITE];
   }
-  static constexpr Direction forwardLane(Color c) { return c == Color::WHITE ? Direction::N : Direction::S; }
-  static constexpr Direction reverse(Direction d) { return directionReverse[static_cast<int>(d)]; }
-  static constexpr bool isDiagonal(Direction d) { return d >= Direction::NE && d <= Direction::SE; }
-  static constexpr bool isUpwards(Direction d) { return sfamt(d) > 0; }
-  static constexpr int sfamt(Direction d) { return directionShift[static_cast<int>(d)]; }
-  static constexpr int numSqsInLane(Direction d, int square) { 
+  static constexpr Direction forwardLane(Color c) noexcept { return c == Color::WHITE ? Direction::N : Direction::S; }
+  static constexpr Direction reverse(Direction d) noexcept { return directionReverse[static_cast<int>(d)]; }
+  static constexpr bool isDiagonal(Direction d) noexcept { return d >= Direction::NE && d <= Direction::SE; }
+  static constexpr bool isUpwards(Direction d) noexcept { return sfamt(d) > 0; }
+  static constexpr int sfamt(Direction d) noexcept { return directionShift[static_cast<int>(d)]; }
+  static constexpr int numSqsInLane(Direction d, int square) noexcept { 
     int rowIndex {7 - square / 8}, colIndex {7 - square % 8};
     switch (d) {
       case Direction::W: return colIndex;

@@ -39,13 +39,13 @@ using DeltasContainerType = DeltasContainerTrait<mType>::type;
 template<MoveType mType>
 struct PieceSquareDeltas {
   using MoveDeltasList = DeltasContainerType<mType>;
-  static MoveDeltasList generate(const Move<mType> move) { return {}; }
+  static MoveDeltasList generate(const Move<mType> move) noexcept { return {}; }
 };
 
 template<>
 struct PieceSquareDeltas<MoveType::Normal>  {
   using MoveDeltasList = DeltasContainerType<MoveType::Normal>;
-  static MoveDeltasList generate(const Move<MoveType::Normal> move) {
+  static MoveDeltasList generate(const Move<MoveType::Normal> move) noexcept {
     auto maybeCapturedKey = move.capturedKey();
     MoveDeltasList deltas = {
       Delta::Remove( move.movedKey(), move.start() ),
@@ -72,7 +72,7 @@ struct PieceSquareDeltas<MoveType::Enpassant>  {
 template<>
 struct PieceSquareDeltas<MoveType::Promotion> {
   using MoveDeltasList = DeltasContainerType<MoveType::Promotion>;
-  static MoveDeltasList generate(const Move<MoveType::Promotion> move) {
+  static MoveDeltasList generate(const Move<MoveType::Promotion> move) noexcept {
     auto maybeCapturedKey = move.capturedKey();
     MoveDeltasList deltas = {
       Delta::Remove( move.movedKey(),     move.start() ),
@@ -87,7 +87,7 @@ struct PieceSquareDeltas<MoveType::Promotion> {
 template<>
 struct PieceSquareDeltas<MoveType::Castle> {
   using MoveDeltasList = DeltasContainerType<MoveType::Castle>;
-  static MoveDeltasList generate(const Move<MoveType::Castle> move) {
+  static MoveDeltasList generate(const Move<MoveType::Castle> move) noexcept {
     return {
       Delta::Remove( move.movedKey(),       move.start()            ),
       Delta::Place ( move.movedKey(),       move.end()              ),
@@ -100,7 +100,7 @@ struct PieceSquareDeltas<MoveType::Castle> {
 template<>
 struct PieceSquareDeltas<MoveType::DoublePawnPush> {
   using MoveDeltasList = DeltasContainerType<MoveType::DoublePawnPush>;
-  static MoveDeltasList generate(const Move<MoveType::DoublePawnPush> move) {
+  static MoveDeltasList generate(const Move<MoveType::DoublePawnPush> move) noexcept {
     return {
       Delta::Remove( move.movedKey(), move.start() ),
       Delta::Place ( move.movedKey(), move.end()   ),

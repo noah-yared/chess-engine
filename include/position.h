@@ -29,25 +29,25 @@ class Position {
 public:
   using RNG = std::mt19937_64; // random number generator for hashing function
 
-  friend std::ostream& operator<<(std::ostream& os, const Position& pos);
+  friend std::ostream& operator<<(std::ostream& os, const Position& pos) noexcept;
   friend void debug(Position& pos);
 
   /////////////////////////
   // Constructors        //
   /////////////////////////
-  Position() : bitboards_{}, state_{}, hash_{ZobristHasher<RNG>::initialZobristHash()}, moves_{} {};
-  explicit Position(const std::string& fen) : bitboards_{fen, FromFEN{}}, state_{fen},
+  Position() noexcept : bitboards_{}, state_{}, hash_{ZobristHasher<RNG>::initialZobristHash()}, moves_{} {};
+  explicit Position(const std::string& fen) noexcept : bitboards_{fen, FromFEN{}}, state_{fen},
       hash_{ZobristHasher<RNG>::computeZobristHash(bitboards_, state_)}, moves_{} {};
   
   /////////////////////////
   // Factory Methods     //
   /////////////////////////
-  static Position fromStartingPosition() {
+  static Position fromStartingPosition() noexcept {
     return Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
   }
 
   static Position fromAscii(const std::string& asciiBoard, const std::string turn = "w",
-      const std::string castlingRights = "-", const std::string enpassant = "-") {
+      const std::string castlingRights = "-", const std::string enpassant = "-") noexcept {
     return {
       Bitboards(asciiBoard, FromAsciiBoard{}),
       BoardState(turn, castlingRights, enpassant)
@@ -57,7 +57,7 @@ public:
   /////////////////////////
   // Position Loading    //
   /////////////////////////
-  void loadFEN(const std::string& fen) {
+  void loadFEN(const std::string& fen) noexcept {
     bitboards_ = Bitboards(fen, FromFEN{});
     state_ = BoardState(fen);
     hash_ = ZobristHasher<RNG>::computeZobristHash(bitboards_, state_);
@@ -65,7 +65,7 @@ public:
   }
   
   void loadAsciiBoard(const std::string& asciiBoard, const std::string turn = "w",
-      const std::string castlingRights = "-", const std::string enpassant = "-") {
+      const std::string castlingRights = "-", const std::string enpassant = "-") noexcept {
     bitboards_ = Bitboards(asciiBoard, FromAsciiBoard{});
     state_ = BoardState(turn, castlingRights, enpassant);
     hash_ = ZobristHasher<RNG>::computeZobristHash(bitboards_, state_);
@@ -76,7 +76,7 @@ public:
   // Move Operations     //
   /////////////////////////
   template<MoveType mType>
-  void applyMove(const Move<mType> move) {
+  void applyMove(const Move<mType> move) noexcept {
     const auto deltas = PieceSquareDeltas<mType>::generate(move);
     updateBitboards<mType>(move, deltas);
     auto extractedPrevState = state_.extract();
@@ -85,14 +85,14 @@ public:
   }
 
   template<MoveType mType>
-  void undoMove(const Move<mType> move, const BoardStateSnapshot previousSnapshot) {
+  void undoMove(const Move<mType> move, const BoardStateSnapshot previousSnapshot) noexcept {
     revertBitboards(move);
     auto [prevState, prevHash] = previousSnapshot;
     state_.revert(prevState), hash_ = prevHash;
   }
 
   template<MoveType mType>
-  bool pushIfSafe(Move<mType> candidateMove) const {
+  bool pushIfSafe(Move<mType> candidateMove) const noexcept {
     if (doesMoveExposeAllyKing(candidateMove)) return false;
     return moves_.push(candidateMove), true;
   }
@@ -100,7 +100,7 @@ public:
   /////////////////////////
   // Move Generation     //
   /////////////////////////
-  const MoveList& legalMoves() const;
+  const MoveList& legalMoves() const noexcept;
 
   /////////////////////////
   // Move Factory        //
@@ -134,12 +134,12 @@ public:
   /////////////////////////
   // Move Validation     //
   /////////////////////////
-  bool isKingInCheck(Color color) const {
+  bool isKingInCheck(Color color) const noexcept {
     return ! isBitboardSafeFromSide( bitboards_.bb(PieceType::KING, color), opposite(color) );
   }
 
   template<MoveType mType>
-  bool doesMoveExposeAllyKing(const Move<mType> move) const {
+  bool doesMoveExposeAllyKing(const Move<mType> move) const noexcept {
     auto snapshot = getStateSnapshot();
     const_cast<Position*>(this)->applyMove(move);
     bool isKingChecked = this->isKingInCheck(move.side()); 
@@ -150,57 +150,57 @@ public:
   /////////////////////////
   // State Interface     //
   /////////////////////////
-  [[nodiscard]] BoardStateSnapshot getStateSnapshot() const { return { .state = state_.extract(), .hash = hash_ }; }
-  [[nodiscard]] u64 getHash() const { return hash_; } 
+  [[nodiscard]] BoardStateSnapshot getStateSnapshot() const noexcept { return { .state = state_.extract(), .hash = hash_ }; }
+  [[nodiscard]] u64 getHash() const noexcept { return hash_; } 
   template<typename EvalTag = EvalV3 /* default to V3, current fastest */>
-  [[nodiscard]] int evaluation() const { return Evaluator::evaluate<EvalTag>(bitboards_); }
-  [[nodiscard]] std::optional<int> maybeEnpassantSquare() const { return state_.getEnpassantSquare(); }
-  [[nodiscard]] int castlingRights() const { return state_.castlingBits(); }
-  [[nodiscard]] std::vector<int> availableCastlingDests(Color color) const { return state_.availableCastlingDestinations(color); }
-  [[nodiscard]] Color sideToMove() const { return state_.getTurn(); }
-  [[nodiscard]] bool isWhiteToMove() const { return state_.getTurn() == Color::WHITE; }
+  [[nodiscard]] int evaluation() const noexcept { return Evaluator::evaluate<EvalTag>(bitboards_); }
+  [[nodiscard]] std::optional<int> maybeEnpassantSquare() const noexcept { return state_.getEnpassantSquare(); }
+  [[nodiscard]] int castlingRights() const noexcept { return state_.castlingBits(); }
+  [[nodiscard]] std::vector<int> availableCastlingDests(Color color) const noexcept { return state_.availableCastlingDestinations(color); }
+  [[nodiscard]] Color sideToMove() const noexcept { return state_.getTurn(); }
+  [[nodiscard]] bool isWhiteToMove() const noexcept { return state_.getTurn() == Color::WHITE; }
 
   /////////////////////////
   // Bitboards Interface //
   /////////////////////////
   // King square
-  [[nodiscard]] int kingSquare(Color color) const { return bitboards_.king(color); }
+  [[nodiscard]] int kingSquare(Color color) const noexcept { return bitboards_.king(color); }
   
   // Piece occupancy queries
-  [[nodiscard]] u64 getPieceBitboard(PieceType pType, Color color) const { return bitboards_.bb(pType, color); }
-  [[nodiscard]] PieceType getPieceOccupyingSquare(int square) const { return bitboards_.getPieceType(square); }
-  [[nodiscard]] PieceType getPieceOccupyingSquare(int square, Color color) const { return bitboards_.getPieceType(square, color); }
-  [[nodiscard]] bool isPieceOccupyingSquare(PieceType pType, Color color, int square) const { return bitboards_.bb(pType, color) & 1ULL << square; }
-  [[nodiscard]] bool isAllyOccupyingSquare(int square, Color color) const { return bitboards_.allyBB(color) & 1ULL << square; }
-  [[nodiscard]] bool isEnemyOccupyingSquare(int square, Color color) const { return bitboards_.opposingBB(color) & 1ULL << square; }
-  [[nodiscard]] bool isSquareOccupied(int square) const { return bitboards_.combinedBB() & 1ULL << square; }
+  [[nodiscard]] u64 getPieceBitboard(PieceType pType, Color color) const noexcept { return bitboards_.bb(pType, color); }
+  [[nodiscard]] PieceType getPieceOccupyingSquare(int square) const noexcept { return bitboards_.getPieceType(square); }
+  [[nodiscard]] PieceType getPieceOccupyingSquare(int square, Color color) const noexcept { return bitboards_.getPieceType(square, color); }
+  [[nodiscard]] bool isPieceOccupyingSquare(PieceType pType, Color color, int square) const noexcept { return bitboards_.bb(pType, color) & 1ULL << square; }
+  [[nodiscard]] bool isAllyOccupyingSquare(int square, Color color) const noexcept { return bitboards_.allyBB(color) & 1ULL << square; }
+  [[nodiscard]] bool isEnemyOccupyingSquare(int square, Color color) const noexcept { return bitboards_.opposingBB(color) & 1ULL << square; }
+  [[nodiscard]] bool isSquareOccupied(int square) const noexcept { return bitboards_.combinedBB() & 1ULL << square; }
 
   // Bitboard filters
-  [[nodiscard]] u64 filterOccupiedSquares(u64 bb) const { return bb & bitboards_.combinedBB(); }
-  [[nodiscard]] u64 filterAllySquares(u64 bb, Color color) const { return bb & bitboards_.allyBB(color); }
-  [[nodiscard]] u64 filterEnemySquares(u64 bb, Color color) const { return bb & bitboards_.opposingBB(color); }
+  [[nodiscard]] u64 filterOccupiedSquares(u64 bb) const noexcept { return bb & bitboards_.combinedBB(); }
+  [[nodiscard]] u64 filterAllySquares(u64 bb, Color color) const noexcept { return bb & bitboards_.allyBB(color); }
+  [[nodiscard]] u64 filterEnemySquares(u64 bb, Color color) const noexcept { return bb & bitboards_.opposingBB(color); }
   template<int rank>
-  [[nodiscard]] static u64 filterRankFromBitboard(u64 bb) { return BitUtils::filterRank<rank>(bb); }
+  [[nodiscard]] static u64 filterRankFromBitboard(u64 bb) noexcept { return BitUtils::filterRank<rank>(bb); }
   template<char file>
-  [[nodiscard]] static u64 filterFileFromBitboard(u64 bb) { return BitUtils::filterFile<file>(bb); }
+  [[nodiscard]] static u64 filterFileFromBitboard(u64 bb) noexcept { return BitUtils::filterFile<file>(bb); }
 
   // Bitboard clearers
-  [[nodiscard]] u64 clearOccupiedSquares(u64 bb) const { return bb & ~bitboards_.combinedBB(); }
-  [[nodiscard]] u64 clearAllySquares(u64 bb, Color color) const { return bb & ~bitboards_.allyBB(color); }
-  [[nodiscard]] u64 clearEnemySquares(u64 bb, Color color) const { return bb & ~bitboards_.opposingBB(color); }
+  [[nodiscard]] u64 clearOccupiedSquares(u64 bb) const noexcept { return bb & ~bitboards_.combinedBB(); }
+  [[nodiscard]] u64 clearAllySquares(u64 bb, Color color) const noexcept { return bb & ~bitboards_.allyBB(color); }
+  [[nodiscard]] u64 clearEnemySquares(u64 bb, Color color) const noexcept { return bb & ~bitboards_.opposingBB(color); }
   template<int rank>
-  [[nodiscard]] static u64 clearRankFromBitboard(u64 bb) { return BitUtils::clearRank<rank>(bb); }
+  [[nodiscard]] static u64 clearRankFromBitboard(u64 bb) noexcept { return BitUtils::clearRank<rank>(bb); }
   template<char file>
-  [[nodiscard]] static u64 clearFileFromBitboard(u64 bb) { return BitUtils::clearFile<file>(bb); }
+  [[nodiscard]] static u64 clearFileFromBitboard(u64 bb) noexcept { return BitUtils::clearFile<file>(bb); }
 
   /////////////////////////
   // Utility Methods     //
   /////////////////////////
-  void clearMoveBuffer() const { moves_.clear(); }
-  std::string stringifyBitboards() const { return bitboards_.toString(); }
-  std::string stringifyBoardState() const { return state_.toString(); }
-  bool areBitboardsConsistent() const { return bitboards_.isConsistent(); }
-  std::string toFen() const {
+  void clearMoveBuffer() const noexcept { moves_.clear(); }
+  std::string stringifyBitboards() const noexcept { return bitboards_.toString(); }
+  std::string stringifyBoardState() const noexcept { return state_.toString(); }
+  bool areBitboardsConsistent() const noexcept { return bitboards_.isConsistent(); }
+  std::string toFen() const noexcept {
     std::stringstream ss;
     ss << bitboards_.parsePiecePlacement()
        << " " << state_.parseTurn()
@@ -213,10 +213,10 @@ public:
   /////////////////////////
   // Operators           //
   /////////////////////////
-  bool operator==(const Position& other) const { return bitboards_ == other.bitboards_ && state_ == other.state_ && hash_ == other.hash_; } 
-  bool operator!=(const Position& other) const { return ! (operator==(other)); }
+  bool operator==(const Position& other) const noexcept { return bitboards_ == other.bitboards_ && state_ == other.state_ && hash_ == other.hash_; } 
+  bool operator!=(const Position& other) const noexcept { return ! (operator==(other)); }
 
-  void printMoveList() const { std::cout << moves_ << std::endl; }
+  void printMoveList() const noexcept { std::cout << moves_ << std::endl; }
 
 private:
   Bitboards bitboards_;
@@ -227,7 +227,7 @@ private:
   /////////////////////////
   // Private Constructor //
   /////////////////////////
-  Position(Bitboards bitboards, BoardState state) :
+  Position(Bitboards bitboards, BoardState state) noexcept :
       bitboards_{bitboards},
       state_{state},
       hash_{ZobristHasher<RNG>::computeZobristHash(bitboards, state)},
@@ -237,13 +237,13 @@ private:
   // Move Generation     //
   /////////////////////////
   template<MoveType mType, PieceType pType>
-  void pushLegalMoves() const {
+  void pushLegalMoves() const noexcept {
     static_assert(mType == MoveType::Normal && pType != PieceType::PAWN,
         "Pawn and Castle moves should be handled separately in specializations");
     BitUtils::bitsForEach<>(
-        getPieceBitboard(pType, sideToMove()), [&](int start) {
+        getPieceBitboard(pType, sideToMove()), [&](int start) noexcept {
           BitUtils::bitsForEach<>(clearAllySquares(attackedSquares<pType>(start, sideToMove()), sideToMove()),
-              [&](int dest) { pushIfSafe(createMove<mType, pType>(start, dest)); });
+              [&](int dest) noexcept { pushIfSafe(createMove<mType, pType>(start, dest)); });
         });
   }
 
@@ -251,19 +251,19 @@ private:
   // State Updates       //
   /////////////////////////
   template<MoveType mType, typename Container>
-  void updateBitboards(const Move<mType> move, const Container& deltas) {
+  void updateBitboards(const Move<mType> move, const Container& deltas) noexcept {
     for (const auto [key, square] : deltas)
       bitboards_.togglePieceSquare(key, square);
   }
   
   template<MoveType mType>
-  void revertBitboards(const Move<mType> move) {
+  void revertBitboards(const Move<mType> move) noexcept {
     for (const auto [key, square] : PieceSquareDeltas<mType>::generate(move))
       bitboards_.togglePieceSquare(key, square);
   }
 
   template<MoveType mType>
-  void updateState(const Move<mType> move) {
+  void updateState(const Move<mType> move) noexcept {
     updateEnpassantSquare<mType>(move, state_);
     updateCastlingPrivs<mType>(move, state_);
     updateTurn<mType>(move, state_);
@@ -271,7 +271,7 @@ private:
 
   template<MoveType mType, typename Container>
   void updateHash(const Move<mType> move, const Container& deltas, const BoardState prevState,
-      const BoardState newState) {
+      const BoardState newState) noexcept {
     hash_ ^= ZobristHasher<RNG>::getHashUpdateMask<mType>(move, deltas, prevState.getEnpassantSquare(),
         prevState.castlingBits(), newState.castlingBits());
   }
@@ -280,7 +280,7 @@ private:
   // Safety Checks       //
   /////////////////////////
   // only check valid castle when making move so assume color is the side to move
-  bool isCastleSafe(int dest) const {
+  bool isCastleSafe(int dest) const noexcept {
     int king = kingSquare(sideToMove());
     u64 emptySquaresMask = king < dest
         ? QUEENSIDE_CASTLE_MASK(sideToMove())
@@ -292,17 +292,17 @@ private:
     return isBitboardSafeFromSide(safetyMask, opposite(sideToMove()));
   }
 
-  bool isBitboardSafeFromSide(u64 bb, Color color) const {
+  bool isBitboardSafeFromSide(u64 bb, Color color) const noexcept {
     return ! isBitboardAttackedBySide<PieceType::PAWN, PieceType::KNIGHT, PieceType::BISHOP,
         PieceType::ROOK, PieceType::QUEEN,  PieceType::KING>(bb, color);
   }
 
-  bool isSquareSafeFromSide(int square, Color color) const {
+  bool isSquareSafeFromSide(int square, Color color) const noexcept {
     return isBitboardSafeFromSide(1ULL << square, color);
   }
 
   template<PieceType pType, PieceType ...rest>
-  bool isBitboardAttackedBySide(u64 bb, Color color) const {
+  bool isBitboardAttackedBySide(u64 bb, Color color) const noexcept {
     if constexpr(sizeof...(rest) > 0)
       return (bb & controlledSquares<pType>(color)) || isBitboardAttackedBySide<rest...>(bb, color);
     return (bb & controlledSquares<pType>(color));
@@ -312,7 +312,7 @@ private:
   // Attack Generation   //
   /////////////////////////
   template<PieceType pType, PieceType ...rest>
-  u64 controlledSquares(Color color) const {
+  u64 controlledSquares(Color color) const noexcept {
     u64 ctrlSquares = rawControlledSquares<pType>(color);
     if constexpr(sizeof...(rest) > 0)
       ctrlSquares |= controlledSquares<rest...>(color);
@@ -321,29 +321,29 @@ private:
 
   // Raw controlled squares (all squares piece can attack, including allies)
   template<PieceType pType>
-  u64 rawControlledSquares(Color color) const {
+  u64 rawControlledSquares(Color color) const noexcept {
     if constexpr (pType == PieceType::PAWN) {
       return squaresAttackedByPawns(color);
     } else {
-      return BitUtils::accumulateBits<u64>(getPieceBitboard(pType, color), [&](u64 targets, int lsb) {
+      return BitUtils::accumulateBits<u64>(getPieceBitboard(pType, color), [&](u64 targets, int lsb) noexcept {
         return targets | attackedSquares<pType>(lsb, color);
       });
     }
   }
 
-  inline u64 singlePawnPushTargets(Color color) const {
-    auto pushDests = [&]<Color color> {
+  inline u64 singlePawnPushTargets(Color color) const noexcept {
+    auto pushDests = [&]<Color color>() noexcept {
       return clearOccupiedSquares(Position::stepBitboard<forward<color>>(getPieceBitboard(PieceType::PAWN, color)));
     };
     return color == Color::WHITE ? pushDests.operator()<Color::WHITE>() : pushDests.operator()<Color::BLACK>();
   }
 
-  inline u64 squaresAttackedByPawns(Color color) const {
-    auto getAttackedSquares = [&]<Color color>() -> u64 {
+  inline u64 squaresAttackedByPawns(Color color) const noexcept {
+    auto getAttackedSquares = [&]<Color color>() noexcept -> u64 {
       return Position::stepBitboard<leftPawnAttack<color>, rightPawnAttack<color>>(
           getPieceBitboard(PieceType::PAWN, color),
-          [](u64 bb) { return Position::clearFileFromBitboard<'a'>(bb); },
-          [](u64 bb) { return Position::clearFileFromBitboard<'h'>(bb); });
+          [](u64 bb) noexcept { return Position::clearFileFromBitboard<'a'>(bb); },
+          [](u64 bb) noexcept { return Position::clearFileFromBitboard<'h'>(bb); });
     };
     return color == Color::WHITE ? getAttackedSquares.operator()<Color::WHITE>() : getAttackedSquares.operator()<Color::BLACK>();
   }
@@ -351,14 +351,14 @@ private:
   /////////////////////////
   // Sliding Attacks     //
   /////////////////////////
-  [[nodiscard]] u64 attackedDiagonalSquares(int square, Color color) const {
+  [[nodiscard]] u64 attackedDiagonalSquares(int square, Color color) const noexcept {
     return attackedSquaresAlongLaneFromSquare<Direction::NW>(square, color) |
            attackedSquaresAlongLaneFromSquare<Direction::NE>(square, color) |
            attackedSquaresAlongLaneFromSquare<Direction::SE>(square, color) |
            attackedSquaresAlongLaneFromSquare<Direction::SW>(square, color);
   }
   
-  [[nodiscard]] u64 attackedOrthogonalSquares(int square, Color color) const {
+  [[nodiscard]] u64 attackedOrthogonalSquares(int square, Color color) const noexcept {
     return attackedSquaresAlongLaneFromSquare<Direction::N>(square, color) |
            attackedSquaresAlongLaneFromSquare<Direction::E>(square, color) |
            attackedSquaresAlongLaneFromSquare<Direction::S>(square, color) |
@@ -366,7 +366,7 @@ private:
   }
   
   template<PieceType pType>
-  [[nodiscard]] u64 attackedSquares(int square, Color color) const {
+  [[nodiscard]] u64 attackedSquares(int square, Color color) const noexcept {
     static_assert(pType != PieceType::PAWN, "Pawns are not supported in this function; use this for other piece types");
     if constexpr (pType == PieceType::KNIGHT)
       return Attacks::getKnightAttackBitmap(square);
@@ -382,7 +382,7 @@ private:
   // sliding attack helpers
   template<Direction upwardLane>
   requires (Directions::isUpwards(upwardLane))
-  u64 attackedSquaresAlongLaneFromSquare(int square, Color color) const {
+  u64 attackedSquaresAlongLaneFromSquare(int square, Color color) const noexcept {
     u64 attackRay = Attacks::getSlidingAttackBitmap(square, upwardLane);
     u64 piecesOnLane = filterOccupiedSquares(attackRay);
     if (!piecesOnLane) // no blockers - free lane
@@ -392,7 +392,7 @@ private:
 
   template<Direction downwardLane>
   requires (! Directions::isUpwards(downwardLane))
-  u64 attackedSquaresAlongLaneFromSquare(int square, Color color) const {
+  u64 attackedSquaresAlongLaneFromSquare(int square, Color color) const noexcept {
     u64 attackRay = Attacks::getSlidingAttackBitmap(square, downwardLane);
     u64 piecesOnLane = filterOccupiedSquares(attackRay);
     if (!piecesOnLane) // no blockers - free lane
@@ -404,13 +404,13 @@ private:
   // Bitboard Utilities  //
   /////////////////////////
   // useful default unary identity function (bitboard => bitboard) for templates
-  constexpr static inline auto identity = [](u64 bb) { return bb; };
+  constexpr static inline auto identity = [](u64 bb) noexcept { return bb; };
   
   // bitboard shift helpers 
   template<Direction direction, Direction ...directions, typename UnaryOp=decltype(Position::identity), typename... UnaryOps>
   requires (std::is_invocable_v<UnaryOp, u64> &&
       requires(u64 bb, UnaryOp f){ { f(bb) } -> std::same_as<u64>; })
-  [[nodiscard]] static u64 stepBitboard(u64 bb, UnaryOp func=identity, UnaryOps... funcs) {
+  [[nodiscard]] static u64 stepBitboard(u64 bb, UnaryOp func=identity, UnaryOps... funcs) noexcept {
     u64 steppedBB = BitUtils::stepBitsForward(func(bb), direction);
     if constexpr (sizeof...(directions) > 0)
       return steppedBB | stepBitboard<directions...>(bb, funcs...);
@@ -421,7 +421,7 @@ private:
   // Pawn Move Helpers   //
   /////////////////////////
   template<Color color, MoveType mType = MoveType::Normal>
-  void pushPawnAttackMoves(int dest) const {
+  void pushPawnAttackMoves(int dest) const noexcept {
     int leftAtkSquare = dest - Directions::sfamt(leftPawnAttack<color>);
     int rightAtkSquare = dest - Directions::sfamt(rightPawnAttack<color>);
     if (!isSquareOnRightEdge(dest) && isPieceOccupyingSquare(PieceType::PAWN, color, leftAtkSquare))
@@ -431,11 +431,11 @@ private:
   }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Position& pos) {
-  os << "Position:\n"
-     << pos.stringifyBoardState() << '\n'
-     << std::hex << pos.getHash() << std::dec << '\n'
-     << pos.stringifyBitboards() << '\n';
+inline std::ostream& operator<<(std::ostream& os, const Position& pos) noexcept {
+  os << "Position = {\n"
+     << "  state: " << pos.stringifyBoardState() << ",\n"
+     << "  hash: " << std::hex << pos.getHash() << std::dec << ",\n"
+     << "  board:\n" << pos.stringifyBitboards() << "}\n";
   return os;
 }
 
@@ -445,41 +445,41 @@ inline std::ostream& operator<<(std::ostream& os, const Position& pos) {
 
 // Position::doesMoveExposeAllyKing() specialization
 template<>
-inline bool Position::doesMoveExposeAllyKing<MoveType::Castle>(const Move<MoveType::Castle> move) const {
+inline bool Position::doesMoveExposeAllyKing<MoveType::Castle>(const Move<MoveType::Castle> move) const noexcept {
   return ! Position::isCastleSafe(move.end());
 }
 
 // Position::pushLegalMoves() specializations for move types not handled in primary template
 template<>
-inline void Position::pushLegalMoves<MoveType::Normal, PieceType::PAWN>() const {
-  auto pushMoves = [&]<Color color> {
+inline void Position::pushLegalMoves<MoveType::Normal, PieceType::PAWN>() const noexcept {
+  auto pushMoves = [&]<Color color>() noexcept {
     BitUtils::bitsForEach<>(
-        clearRankFromBitboard<promotionRank<color>>(singlePawnPushTargets(color)), [&](int dest) {
+        clearRankFromBitboard<promotionRank<color>>(singlePawnPushTargets(color)), [&](int dest) noexcept {
           pushIfSafe(createMove<MoveType::Normal, PieceType::PAWN>(dest - Directions::sfamt(forward<color>), dest));
         });
     BitUtils::bitsForEach<>(filterEnemySquares(clearRankFromBitboard<promotionRank<color>>(
-        squaresAttackedByPawns(color)), color), [&](int dest) { pushPawnAttackMoves<color>(dest); });
+        squaresAttackedByPawns(color)), color), [&](int dest) noexcept { pushPawnAttackMoves<color>(dest); });
   };
   isWhiteToMove() ? pushMoves.operator()<Color::WHITE>() : pushMoves.operator()<Color::BLACK>();
 }
 
 template<>
-inline void Position::pushLegalMoves<MoveType::Promotion, PieceType::PAWN>() const {
-  auto pushMoves = [&]<Color color> {
+inline void Position::pushLegalMoves<MoveType::Promotion, PieceType::PAWN>() const noexcept {
+  auto pushMoves = [&]<Color color>() noexcept {
     BitUtils::bitsForEach<>(
-        filterRankFromBitboard<promotionRank<color>>(singlePawnPushTargets(color)), [&](int dest) {
+        filterRankFromBitboard<promotionRank<color>>(singlePawnPushTargets(color)), [&](int dest) noexcept {
           pushIfSafe(createMove<MoveType::Promotion, PieceType::PAWN>(dest - Directions::sfamt(forward<color>), dest));
         });
     BitUtils::bitsForEach<>(filterEnemySquares(filterRankFromBitboard<promotionRank<color>>(
-        squaresAttackedByPawns(color)), color), [&](int dest) { pushPawnAttackMoves<color, MoveType::Promotion>(dest); });
+        squaresAttackedByPawns(color)), color), [&](int dest) noexcept { pushPawnAttackMoves<color, MoveType::Promotion>(dest); });
   };
   isWhiteToMove() ? pushMoves.operator()<Color::WHITE>() : pushMoves.operator()<Color::BLACK>();
 }
 
 template<>
-inline void Position::pushLegalMoves<MoveType::Enpassant, PieceType::PAWN>() const {
-  auto pushMoves = [&]<Color color> {
-    BitUtils::bitsForEach<>((1ULL << maybeEnpassantSquare().value_or(0ULL)) & ~1ULL, [&](int dest) {
+inline void Position::pushLegalMoves<MoveType::Enpassant, PieceType::PAWN>() const noexcept {
+  auto pushMoves = [&]<Color color>() noexcept {
+    BitUtils::bitsForEach<>((1ULL << maybeEnpassantSquare().value_or(0ULL)) & ~1ULL, [&](int dest) noexcept {
       pushPawnAttackMoves<color, MoveType::Enpassant>(dest);
     });
   };
@@ -487,12 +487,12 @@ inline void Position::pushLegalMoves<MoveType::Enpassant, PieceType::PAWN>() con
 }
 
 template<>
-inline void Position::pushLegalMoves<MoveType::DoublePawnPush, PieceType::PAWN>() const {
-  auto pushMoves = [&]<Color color> {
+inline void Position::pushLegalMoves<MoveType::DoublePawnPush, PieceType::PAWN>() const noexcept {
+  auto pushMoves = [&]<Color color>() noexcept {
     BitUtils::bitsForEach<>(
-        clearOccupiedSquares(Position::stepBitboard<forward<color>>(singlePawnPushTargets(color), [](u64 bb) {
+        clearOccupiedSquares(Position::stepBitboard<forward<color>>(singlePawnPushTargets(color), [](u64 bb) noexcept {
           return Position::filterRankFromBitboard<pawnRank<color> + rankDelta<color>>(bb);
-        })), [&](int dest) {
+        })), [&](int dest) noexcept {
           pushIfSafe(createMove<MoveType::DoublePawnPush, PieceType::PAWN>(dest - 2 * Directions::sfamt(forward<color>), dest));
         });
   };
@@ -500,12 +500,12 @@ inline void Position::pushLegalMoves<MoveType::DoublePawnPush, PieceType::PAWN>(
 }
 
 template<>
-inline void Position::pushLegalMoves<MoveType::Castle, PieceType::KING>() const {
+inline void Position::pushLegalMoves<MoveType::Castle, PieceType::KING>() const noexcept {
   auto castlingDests = availableCastlingDests(sideToMove());
   u64 castlingTargets = std::accumulate(castlingDests.begin(), castlingDests.end(),
-      0ULL, [](u64 dests, int sq) { return dests | (1ULL << sq); });
-  auto pushMoves = [&]<Color color> {
-    BitUtils::bitsForEach<>(castlingTargets, [&](int dest) {
+      0ULL, [](u64 dests, int sq) noexcept { return dests | (1ULL << sq); });
+  auto pushMoves = [&]<Color color>() noexcept {
+    BitUtils::bitsForEach<>(castlingTargets, [&](int dest) noexcept {
       pushIfSafe(createMove<MoveType::Castle, PieceType::KING>( kingSquare(sideToMove()), dest));
     });
   };

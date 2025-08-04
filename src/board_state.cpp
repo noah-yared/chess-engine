@@ -5,7 +5,7 @@
 #include "board_utils.h"
 
 // Complex constructors
-BoardState::BoardState(const std::string& turn, const std::string& castlingRights, const std::string& enpassant) : state_{} {
+BoardState::BoardState(const std::string& turn, const std::string& castlingRights, const std::string& enpassant) noexcept : state_{} {
   setTurn(turn);
   setCastlingPrivileges(castlingRights);
   setEnpassantSquare(enpassant == "-"
@@ -14,7 +14,7 @@ BoardState::BoardState(const std::string& turn, const std::string& castlingRight
   );
 }
 
-BoardState::BoardState(const std::string& fen) {
+BoardState::BoardState(const std::string& fen) noexcept {
   size_t start = fen.find_first_of(' ') + 1;
   setTurn(fen.substr(start, 1));
   start += 2;
@@ -27,11 +27,11 @@ BoardState::BoardState(const std::string& fen) {
 }
 
 // Private helper methods
-void BoardState::setTurn(const std::string& color) {
+void BoardState::setTurn(const std::string& color) noexcept {
   if ((color == "b") != blackToMove()) updateTurn(); // toggle turn due to mismatch
 }
 
-void BoardState::setCastlingPrivileges(const std::string& privs) {
+void BoardState::setCastlingPrivileges(const std::string& privs) noexcept {
   u32 rights = 0;
   if (privs != "-")
     for (char c : privs)
@@ -41,7 +41,7 @@ void BoardState::setCastlingPrivileges(const std::string& privs) {
 }
 
 // Complex logic methods
-std::vector<int> BoardState::availableCastlingDestinations(Color color) const {
+std::vector<int> BoardState::availableCastlingDestinations(Color color) const noexcept {
   // white castling bits are the upper 2 bits of the castling bits
   std::vector<int> dests; dests.reserve(2); 
   int isWhite = color == Color::WHITE, isBlack = color == Color::BLACK;
@@ -54,7 +54,7 @@ std::vector<int> BoardState::availableCastlingDestinations(Color color) const {
 }
 
 // String parsing methods
-std::string BoardState::parseCastlingRights() const {
+std::string BoardState::parseCastlingRights() const noexcept {
   if (!castlingBits())
     return "-";
   std::stringstream ss;
@@ -64,26 +64,26 @@ std::string BoardState::parseCastlingRights() const {
   return ss.str();
 }
 
-std::string BoardState::parseTurn() const {
+std::string BoardState::parseTurn() const noexcept {
   return blackToMove() ? "b" : "w";
 }
 
-std::string BoardState::parseEnpassantSquare() const {
+std::string BoardState::parseEnpassantSquare() const noexcept {
   if (!existsEnpassantSq())
     return "-";
   return indexToAlgebraicNotation(enpassantSq());
 }
 
-std::string BoardState::toString() const {
+std::string BoardState::toString() const noexcept {
   return parseCastlingRights() + " " + parseTurn() + " " + parseEnpassantSquare();
 }
 
 // Complex comparison operators
-bool BoardState::operator==(const BoardState& other) const {
+bool BoardState::operator==(const BoardState& other) const noexcept {
   return castlingBits() == other.castlingBits() && getTurn() == other.getTurn()
       && getEnpassantSquare().value_or(0) == other.getEnpassantSquare().value_or(0);
 }
 
-bool BoardState::operator!=(const BoardState& other) const { 
+bool BoardState::operator!=(const BoardState& other) const noexcept { 
   return !(operator==(other)); 
 } 

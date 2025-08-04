@@ -20,7 +20,7 @@ constexpr auto U64_MASKS = masks<u64>();
 constexpr auto U8_MASKS = masks<u8>();
 
 template<Field field>
-constexpr std::pair<int, int> divmod() {
+constexpr std::pair<int, int> divmod() noexcept {
   return { detail::FieldTraits<field>::offset / BYTE_SIZE,
            detail::FieldTraits<field>::offset % BYTE_SIZE };
 }
@@ -28,7 +28,7 @@ constexpr std::pair<int, int> divmod() {
 struct PackedTTEntry {
 private:
   template<Field field, std::integral T>
-  inline static void writeBits(std::array<u8, 12> &pack, T value) {
+  inline static void writeBits(std::array<u8, 12> &pack, T value) noexcept {
     auto [byteOffset, bitOffset] = divmod<field>();
     int bitWidth = detail::FieldTraits<field>::width;
     int bitsToPack = std::min(bitWidth, BYTE_SIZE - bitOffset);
@@ -45,7 +45,7 @@ private:
   }
 
   template<Field field, std::integral T>
-  inline static T readBits(const std::array<u8, 12> &pack) {
+  inline static T readBits(const std::array<u8, 12> &pack) noexcept {
     auto [byteOffset, bitOffset] = divmod<field>();
     int bitWidth = detail::FieldTraits<field>::width;
 
@@ -61,20 +61,20 @@ private:
   }
 
   template<typename... Ts, size_t... Is>
-  inline static void insertBits(std::array<u8, 12> &pack, const std::tuple<Ts...> &tp, std::index_sequence<Is...>) {
+  inline static void insertBits(std::array<u8, 12> &pack, const std::tuple<Ts...> &tp, std::index_sequence<Is...>) noexcept {
     (writeBits<detail::IndexToField<Is>::field, Ts>(pack, std::get<Is>(tp)), ...);
   }
 
   std::array<u8, 12> pack_;
 
   template<Field field, typename T = int>
-  [[nodiscard]] inline T getField() const {
+  [[nodiscard]] inline T getField() const noexcept {
     return readBits<field, T>(pack_);
   }
 
   template<Field field, typename T>
   requires std::is_integral_v<T> || std::is_enum_v<T>
-  inline void setField(T value) {
+  inline void setField(T value) noexcept {
     if constexpr(std::is_enum_v<T>) {
       using underlying = std::underlying_type_t<T>;
       writeBits<field, underlying>(pack_, static_cast<underlying>(value));
@@ -84,9 +84,9 @@ private:
   }
 
 public:
-  PackedTTEntry() : pack_{} {}
+  PackedTTEntry() noexcept : pack_{} {}
   
-  PackedTTEntry(u64 key, int score, int depth, Bound bound, std::pair<int, int> bestMove) : pack_{} {
+  PackedTTEntry(u64 key, int score, int depth, Bound bound, std::pair<int, int> bestMove) noexcept : pack_{} {
     u32 vacantFlag = 1;
     u32 encodedMove = ((bestMove.first & 0x3f) << 6) | (bestMove.second & 0x3f);
     u32 boundValue = static_cast<int>(bound);
@@ -99,24 +99,24 @@ public:
   }
   
   // observer methods
-  [[nodiscard]] inline bool isOccupied() const { return ! getField<Field::VACANT>(); }
-  [[nodiscard]] inline bool hasMatchingKey(u64 otherKey) const {
+  [[nodiscard]] inline bool isOccupied() const noexcept { return ! getField<Field::VACANT>(); }
+  [[nodiscard]] inline bool hasMatchingKey(u64 otherKey) const noexcept {
     return getField<Field::KEY, u64>() == (otherKey & U64_MASKS[detail::FieldTraits<Field::KEY>::width]);
   }
-  [[nodiscard]] inline Bound getBound() const { return Bound(getField<Field::BOUND>()); }
-  [[nodiscard]] inline int getEval() const { return getField<Field::SCORE>(); }
-  [[nodiscard]] inline bool hasAtLeastDepth(int depth) const { return getField<Field::DEPTH>() >= depth; }
+  [[nodiscard]] inline Bound getBound() const noexcept { return Bound(getField<Field::BOUND>()); }
+  [[nodiscard]] inline int getEval() const noexcept { return getField<Field::SCORE>(); }
+  [[nodiscard]] inline bool hasAtLeastDepth(int depth) const noexcept { return getField<Field::DEPTH>() >= depth; }
 
   // mutators
-  inline void setEval(int score) { setField<Field::SCORE>(score); }
-  inline void setBound(Bound bound) { setField<Field::BOUND>(bound); }
+  inline void setEval(int score) noexcept { setField<Field::SCORE>(score); }
+  inline void setBound(Bound bound) noexcept { setField<Field::BOUND>(bound); }
 
   template<typename... FieldDataTypes>
-  inline void update(FieldDataTypes... fds) {
+  inline void update(FieldDataTypes... fds) noexcept {
     (setField<decltype(fds)::field_type, decltype(fds)::value_type>(fds.get()), ...);
   }
 
-  inline void clear() { setField<Field::VACANT>(true); }
+  inline void clear() noexcept { setField<Field::VACANT>(true); }
 };
 
 class TranspositionTable {
@@ -127,20 +127,20 @@ private:
   size_t size_;
 
 public:
-  explicit TranspositionTable(size_t size = DEFAULT_HASH_SIZE) : table_{size}, size_{size} {}
+  explicit TranspositionTable(size_t size = DEFAULT_HASH_SIZE) noexcept : table_{size}, size_{size} {}
 
-  void store(u64 key, int score, int depth, Bound bound, std::pair<int,int> bestMove) {
+  void store(u64 key, int score, int depth, Bound bound, std::pair<int,int> bestMove) noexcept {
     size_t index = key % size_;
     table_[index] = PackedTTEntry{key, score, depth, bound, bestMove};
   }
 
-  std::optional<PackedTTEntry*> probe(u64 key) {
+  std::optional<PackedTTEntry*> probe(u64 key) noexcept {
     size_t index = key % size_;
     auto& entry = table_[index];
     return (entry.isOccupied() && entry.hasMatchingKey(key)) ? std::optional<PackedTTEntry*>(&entry) : std::nullopt;
   }
 
-  void clear() {
+  void clear() noexcept {
     for (auto& entry : table_)
       entry.clear();
   }

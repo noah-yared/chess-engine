@@ -30,7 +30,7 @@ public:
   std::array<u64, FILES> enpassantKeys;
   u64 turnKey;
 
-  explicit Zobrist(u64 seed = DEFAULT_SEED) : rng_{seed}, seed_{seed} {
+  explicit Zobrist(u64 seed = DEFAULT_SEED) noexcept : rng_{seed}, seed_{seed} {
     auto keys = std::tie(pieceKeys, castlingKeys, enpassantKeys, turnKey);
     fillAll(rng_, keys);
   };
@@ -43,7 +43,7 @@ private:
 
   template<typename Container>
   requires std::is_integral_v<Container> || Iterable<Container>
-  static void fillWithRandom(Container& c, RandomEngine& rng_) {
+  static void fillWithRandom(Container& c, RandomEngine& rng_) noexcept {
     std::uniform_int_distribution<u64> rdist;
     if constexpr(Iterable<Container>) {
       for (auto& e : c)
@@ -54,8 +54,8 @@ private:
   }
 
   template<typename KeyTupleType>
-  static void fillAll(RandomEngine& rng_, KeyTupleType& keyTuple) {
-    std::apply([=](auto&... keys) mutable -> void {
+  static void fillAll(RandomEngine& rng_, KeyTupleType& keyTuple) noexcept {
+    std::apply([=](auto&... keys) mutable noexcept -> void {
       (fillWithRandom(keys, rng_), ...);
     }, keyTuple);
   }

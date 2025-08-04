@@ -11,8 +11,8 @@ enum class Color {
 };
 
 // inline Color opposite(Color c) { return c == Color::WHITE ? Color::BLACK : Color::WHITE; }
-inline Color opposite(Color c) { return Color(c != Color::WHITE); }
-inline PieceType& operator++(PieceType& t) { return t = PieceType(static_cast<int>(t) + 1); }
+inline Color opposite(Color c) noexcept { return Color(c != Color::WHITE); }
+inline PieceType& operator++(PieceType& t) noexcept { return t = PieceType(static_cast<int>(t) + 1); }
 
 // useful concepts
 template<PieceType pType>

@@ -1,7 +1,7 @@
 #include "move_list.h"
 #include "position.h"
 
-const MoveList& Position::legalMoves() const {
+const MoveList& Position::legalMoves() const noexcept {
   moves_.clear(); // make sure buffer is cleared
 
   // push normal moves

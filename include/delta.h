@@ -11,6 +11,6 @@
 struct Delta {
   int key, square;
 
-  static Delta Place(int key, int square) { return { key, square }; }
-  static Delta Remove(int key, int square) { return { key, square }; }
+  static Delta Place(int key, int square) noexcept { return { key, square }; }
+  static Delta Remove(int key, int square) noexcept { return { key, square }; }
 };
