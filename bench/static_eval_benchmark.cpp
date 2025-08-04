@@ -7,7 +7,9 @@ static void BM_EvaluationV1_StartPos(benchmark::State& state) {
   long long N = state.range(0);
   for (auto _ : state) {
     for (long long i = 0; i < N; ++i) {
-      benchmark::DoNotOptimize(pos.evaluation<EvalV1>());
+      int eval = pos.evaluation<EvalV1>();
+      benchmark::DoNotOptimize(eval);
+      benchmark::ClobberMemory();
     }
   }
 }
@@ -19,7 +21,9 @@ static void BM_EvaluationV2_StartPos(benchmark::State& state) {
   long long N = state.range(0);
   for (auto _ : state) {
     for (long long i = 0; i < N; ++i) {
-      benchmark::DoNotOptimize(pos.evaluation<EvalV2>());
+      int eval = pos.evaluation<EvalV2>();
+      benchmark::DoNotOptimize(eval);
+      benchmark::ClobberMemory();
     }
   }
 }
@@ -31,7 +35,9 @@ static void BM_EvaluationV3_StartPos(benchmark::State& state) {
   long long N = state.range(0);
   for (auto _ : state) {
     for (long long i = 0; i < N; ++i) {
-      benchmark::DoNotOptimize(pos.evaluation<EvalV3>());
+      int eval = pos.evaluation<EvalV3>();
+      benchmark::DoNotOptimize(eval);
+      benchmark::ClobberMemory();
     }
   }
 }
@@ -43,7 +49,9 @@ static void BM_EvaluationV1_MidPos(benchmark::State& state) {
   long long N = state.range(0);
   for (auto _ : state) {
     for (long long i = 0; i < N; ++i) {
-      benchmark::DoNotOptimize(pos.evaluation<EvalV1>());
+      int eval = pos.evaluation<EvalV1>();
+      benchmark::DoNotOptimize(eval);
+      benchmark::ClobberMemory();
     }
   }
 }
@@ -55,7 +63,9 @@ static void BM_EvaluationV2_MidPos(benchmark::State& state) {
   long long N = state.range(0);
   for (auto _ : state) {
     for (long long i = 0; i < N; ++i) {
-      benchmark::DoNotOptimize(pos.evaluation<EvalV2>());
+      int eval = pos.evaluation<EvalV2>();
+      benchmark::DoNotOptimize(eval);
+      benchmark::ClobberMemory();
     }
   }
 }
@@ -67,7 +77,9 @@ static void BM_EvaluationV3_MidPos(benchmark::State& state) {
   long long N = state.range(0);
   for (auto _ : state) {
     for (long long i = 0; i < N; ++i) {
-      benchmark::DoNotOptimize(pos.evaluation<EvalV3>());
+      int eval = pos.evaluation<EvalV3>();
+      benchmark::DoNotOptimize(eval);
+      benchmark::ClobberMemory();
     }
   }
 }
