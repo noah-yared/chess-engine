@@ -148,12 +148,18 @@ public:
   }
 
   /////////////////////////
+  // Static Evaluation   //
+  /////////////////////////
+  [[nodiscard]] int evaluation() const noexcept { return Evaluator::evaluate(bitboards_); }
+  // for benchmarking/debugging
+  [[nodiscard]] int evaluation_v1() const noexcept { return Evaluator::evaluate_v1(bitboards_); }
+  [[nodiscard]] int evaluation_v2() const noexcept { return Evaluator::evaluate_v2(bitboards_); }
+
+  /////////////////////////
   // State Interface     //
   /////////////////////////
   [[nodiscard]] BoardStateSnapshot getStateSnapshot() const noexcept { return { .state = state_.extract(), .hash = hash_ }; }
   [[nodiscard]] u64 getHash() const noexcept { return hash_; } 
-  template<typename EvalTag = EvalV3 /* default to V3, current fastest */>
-  [[nodiscard]] int evaluation() const noexcept { return Evaluator::evaluate<EvalTag>(bitboards_); }
   [[nodiscard]] std::optional<int> maybeEnpassantSquare() const noexcept { return state_.getEnpassantSquare(); }
   [[nodiscard]] int castlingRights() const noexcept { return state_.castlingBits(); }
   [[nodiscard]] std::vector<int> availableCastlingDests(Color color) const noexcept { return state_.availableCastlingDestinations(color); }
