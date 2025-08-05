@@ -34,6 +34,7 @@ if os.path.exists(OUT_FILE):
     OUT_FILE.unlink()
     print(f"Deleted file: {OUT_FILE}")
 
+
 def print_to_err_log(message: str) -> None:
     with open(LOG_FILE, "a") as f:
         f.write(message)
@@ -112,7 +113,7 @@ def build_engine():
 def get_engine_output(fen: str) -> str:
     try:
         result = subprocess.run(
-            [ENGINE_EXECUTABLE, fen], 
+            [ENGINE_EXECUTABLE, '--legal-moves', fen], 
             capture_output=True, 
             text=True,
             timeout=10  # Add timeout to prevent hanging
@@ -130,7 +131,7 @@ def get_engine_output(fen: str) -> str:
     
 
 def parse_engine_output(engine_output: str) -> set[str]:
-    return set(move.strip() for move in engine_output.split(',') if move.strip())
+    return set(move.strip() for move in engine_output.strip("MoveList()").split(',') if move.strip())
 
 def actual_generated_moves(fen: str) -> set[str]|None:
     return parse_engine_output(get_engine_output(fen))
