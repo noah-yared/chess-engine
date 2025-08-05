@@ -11,11 +11,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "Generate compile_commands.json 
 # enable address sanitizer for debugging
 set(CMAKE_CXX_FLAGS_DEBUG "-fsanitize=address -fno-omit-frame-pointer")
 
-# remove exception handling and rtti
+# remove exception handling and rtti and enable optimizations
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native -fomit-frame-pointer -flto -fno-exceptions -fno-rtti -DNDEBUG")
-
-# Define ASIO_STANDALONE to use standalone Asio instead of Boost.Asio
-add_definitions(-DASIO_STANDALONE)
 
 # generate engine_config.h
 configure_file(${CMAKE_SOURCE_DIR}/include/engine_config.h.in ${CMAKE_BINARY_DIR}/engine_config.h)
