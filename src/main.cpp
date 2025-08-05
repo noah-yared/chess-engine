@@ -17,9 +17,11 @@ void printEngineInfo() {
 
 void printUsage(const char* pathToExe) {
   std::cout << "Usage:\n"
+            << "   " << pathToExe << " [--help|-h]\n"
             << "   " << pathToExe << " --simulate|-sim [--num-moves|-n <num_moves>] [--search-depth|-d <search_depth>]\n"
             << "   " << pathToExe << " --legal-moves|-lm <fen>\n"
             << "   " << pathToExe << " --find-best|-fb <fen>\n"
+            << "   " << pathToExe << " --make-move|-mm <fen> <uci_move>\n"
             << "   " << pathToExe << " --make-move|-mm --fen|-f <fen> --move|-m <uci_move>\n\n";
 }
 
@@ -32,7 +34,7 @@ MakeMoveArgs parseMakeMoveArgs(int argc, const char* argv[]) {
     } else if (std::string(argv[i]) == "-m" || std::string(argv[i]) == "--move") {
       args.uciMove = std::string(argv[i + 1]);
     } else {
-      std::cout << "Invalid argument: " << argv[i] << '\n';
+      std::cout << "Invalid flag: " << argv[i] << '\n';
       exit(-1);
     }
   }
@@ -60,7 +62,7 @@ SelfPlayArgs parseSelfPlayArgs(int argc, const char* argv[]) {
         }
       args.searchDepth = std::stoi(argv[i + 1]);
     } else {
-      std::cout << "Invalid argument: " << argv[i] << '\n';
+      std::cout << "Invalid flag: " << argv[i] << '\n';
       exit(-1);
     }
   }
@@ -84,9 +86,32 @@ void simulateSelfPlay(SelfPlayArgs args) {
             << "Nodes per second: " << std::setw(12) << engine.getNodesSearchedCount() * 1000 / duration << " nps\n\n";
 }
 
+void printLegalMoves(const std::string& fen) {
+  Position pos(fen);
+  std::cout << pos.legalMoves() << '\n';
+}
+
+void printBestMove(const std::string& fen) {
+  SearchEngine engine(fen);
+  std::cout << std::visit([](auto&& arg){ return arg.uci(); }, engine.search()) << '\n';
+}
+
+void printNewFen(const std::string& oldFen, const std::string& uciMove) {
+  SearchEngine engine(oldFen);
+  engine.advance(uciToMove(uciMove, engine.getPosition()));
+  std::cout << engine.getPosition().toFen() << '\n';
+}
+
 int main(int argc, const char* argv[]) {
   // print engine info and usage
   if (argc == 1) {
+    printEngineInfo();
+    printUsage(argv[0]);
+    return 0;
+  }
+
+  // help flag
+  if (argc == 2 && (std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h")) {
     printEngineInfo();
     printUsage(argv[0]);
     return 0;
@@ -100,25 +125,28 @@ int main(int argc, const char* argv[]) {
 
   // generate legal moves from fen
   if (argc == 3 && (std::string(argv[1]) == "--legal-moves" || std::string(argv[1]) == "-lm")) {
-    std::string fen = argv[2];
-    Position pos(fen);
-    std::cout << pos.legalMoves() << '\n';
+    printLegalMoves(argv[2]);
     return 0;
   }
 
   // calculate best move from fen
   if (argc == 3 && (std::string(argv[1]) == "--find-best" || std::string(argv[1]) == "-fb")) {
-    SearchEngine engine(argv[2]);
-    std::cout << std::visit([](auto&& arg){ return arg.uci(); }, engine.search()) << '\n';
+    printBestMove(argv[2]);
     return 0;
   }
 
-  // compute update fen from uci move applied to fen
-  if (argc == 6 && (std::string(argv[1]) == "--make-move" || std::string(argv[1]) == "-mm")) {
-    auto [oldFen, uciMove] = parseMakeMoveArgs(argc, argv);
-    SearchEngine engine(oldFen);
-    engine.advance(uciToMove(uciMove, engine.getPosition()));
-    std::cout << engine.getPosition().toFen() << '\n';
+  // compute new fen from uci move applied to fen
+  if (std::string(argv[1]) == "--make-move" || std::string(argv[1]) == "-mm") {
+    if (argc == 6) { // with flags: --make-move --fen <fen> --move <move>
+      auto [oldFen, uciMove] = parseMakeMoveArgs(argc, argv);
+      printNewFen(oldFen, uciMove);
+    } else if (argc == 4) { // without flags: --make-move <fen> <move>
+      printNewFen(argv[2], argv[3]);
+    } else {
+      std::cout << "Invalid number of arguments for make-move\n\n";
+      printUsage(argv[0]);
+      return -1;
+    }
     return 0;
   }
 
