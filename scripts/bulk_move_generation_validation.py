@@ -26,15 +26,6 @@ LOG_DIR = SCRIPT_DIR / "logs"
 LOG_FILE = SCRIPT_DIR / "logs" / "mvgen_errors.log"
 OUT_FILE = SCRIPT_DIR / "logs" / "mvgen_out.log"
 
-if os.path.exists(LOG_FILE):
-    LOG_FILE.unlink()
-    print(f"Deleted file: {LOG_FILE}")
-    
-if os.path.exists(OUT_FILE):
-    OUT_FILE.unlink()
-    print(f"Deleted file: {OUT_FILE}")
-
-
 def print_to_err_log(message: str) -> None:
     with open(LOG_FILE, "a") as f:
         f.write(message)
@@ -183,6 +174,15 @@ def validate_move_generation(fen_test_batch_size: int|None=None):
                 pass
 
 if __name__ == "__main__":
+
+    if os.path.exists(LOG_FILE):
+        LOG_FILE.unlink()
+        print(f"Deleted file: {LOG_FILE}")
+        
+    if os.path.exists(OUT_FILE):
+        OUT_FILE.unlink()
+        print(f"Deleted file: {OUT_FILE}")
+
     LOG_DIR.mkdir(parents=True, exist_ok=True)
 
     if not os.path.exists(ENGINE_EXECUTABLE):
