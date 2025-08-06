@@ -137,9 +137,7 @@ public:
 
   const Position& getPosition() const noexcept { return position_; }
 
-  void dumpPosition() const noexcept {
-    std::cout << position_ << '\n';
-  }  
+  void dumpPosition(std::ostream& os = std::cout) const noexcept { os << position_ << '\n'; }  
 
   u64 getNodesSearchedCount() const noexcept { return nodesSearched_; }
 

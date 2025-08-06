@@ -1,8 +1,14 @@
 #include <chrono>
+#include <filesystem>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <optional>
+#include <string>
+#include <sstream>
+#include <system_error>
 
+#include "constants.h"
 #include "engine.h"
 #include "engine_config.h"
 #include "move_utils.h"
@@ -18,34 +24,18 @@ void printEngineInfo() {
 void printUsage(const char* pathToExe) {
   std::cout << "Usage:\n"
             << "   " << pathToExe << " [--help|-h]\n"
-            << "   " << pathToExe << " --simulate|-sim [--num-moves|-n <num_moves>] [--search-depth|-d <search_depth>]\n"
+            << "   " << pathToExe << " --simulate|-sim [--num-moves|-n <num_moves>] [--search-depth|-d <search_depth>] [--fen|-f <fen>] [--output|-o <output_file>]\n"
             << "   " << pathToExe << " --legal-moves|-lm <fen>\n"
             << "   " << pathToExe << " --find-best|-fb <fen>\n"
             << "   " << pathToExe << " --make-move|-mm <fen> <uci_move>\n"
             << "   " << pathToExe << " --make-move|-mm --fen|-f <fen> --move|-m <uci_move>\n\n";
 }
 
-struct MakeMoveArgs { std::string oldFen, uciMove; };
-MakeMoveArgs parseMakeMoveArgs(int argc, const char* argv[]) {
-  MakeMoveArgs args{};
-  for (int i = 2; i+1 < argc; i+=2) {
-    if (std::string(argv[i]) == "-f" || std::string(argv[i]) == "--fen") {
-      args.oldFen = std::string(argv[i + 1]);
-    } else if (std::string(argv[i]) == "-m" || std::string(argv[i]) == "--move") {
-      args.uciMove = std::string(argv[i + 1]);
-    } else {
-      std::cout << "Invalid flag: " << argv[i] << '\n';
-      exit(-1);
-    }
-  }
-  return args;
-}
-
-struct SelfPlayArgs { std::optional<int> numMoves, searchDepth; };
+struct SelfPlayArgs { std::optional<int> numMoves, searchDepth;
+                      std::optional<std::string> fen, outputFile; };
 SelfPlayArgs parseSelfPlayArgs(int argc, const char* argv[]) {
   SelfPlayArgs args{};
-  if (argc == 2)
-    return args;
+  if (argc == 2) return args;
   for (int i = 2; i+1 < argc; i+=2) {
     if (std::string(argv[i]) == "-n" || std::string(argv[i]) == "--num-moves") {
       for (char c : std::string(argv[i + 1]))
@@ -61,6 +51,10 @@ SelfPlayArgs parseSelfPlayArgs(int argc, const char* argv[]) {
           exit(-1);
         }
       args.searchDepth = std::stoi(argv[i + 1]);
+    } else if (std::string(argv[i]) == "-f" || std::string(argv[i]) == "--fen") {
+      args.fen = std::string(argv[i + 1]);
+    } else if (std::string(argv[i]) == "-o" || std::string(argv[i]) == "--output") {
+      args.outputFile = std::string(argv[i + 1]);
     } else {
       std::cout << "Invalid flag: " << argv[i] << '\n';
       exit(-1);
@@ -69,14 +63,36 @@ SelfPlayArgs parseSelfPlayArgs(int argc, const char* argv[]) {
   return args;
 }
 
-void simulateSelfPlay(SelfPlayArgs args) {
+void simulateSelfPlay(const SelfPlayArgs& args, const char* exePath) {
   int numMoves = args.numMoves.value_or(100), searchDepth = args.searchDepth.value_or(6);
-  std::cout << "Simulating self-play with " << numMoves << " moves at depth " << searchDepth << "...\n\n";
+  std::string fen = args.fen.value_or(std::string(STARTING_FEN)); // default fen if none provided
+
+  // create default output file name
+  const auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+  std::stringstream ss;
+  ss << "engine_output_" << std::put_time(std::localtime(&time), "%Y-%m-%d_%H-%M-%S") << ".txt";
+  std::string outputFile = args.outputFile.value_or(ss.str());
+
+  // create output directory if it doesnt exist and create output file stream
+  auto outputDirectory = std::filesystem::canonical(exePath).parent_path().parent_path() / "output";
+  std::error_code ec;
+  std::filesystem::create_directory(outputDirectory, ec);
+  bool outputToFile = !ec;
+  if (ec)
+    std::cerr << "Error creating output directory: " << ec.message() << '\n'
+              << "Outputting to console instead.\n\n";
+
+  std::ofstream ofs((outputDirectory / outputFile).string());
+  std::cout << "Simulating self-play with " << numMoves << " moves at depth " << searchDepth << ".\n";
+  std::cout << "Dumping positions to "
+            << (outputToFile ? (outputDirectory / outputFile).string() : std::string("console")) << ".\n\n";
+
+  auto& os = outputToFile ? ofs : std::cout;
   auto start = std::chrono::high_resolution_clock::now();
-  SearchEngine engine;
+  SearchEngine engine(fen);
   for (int i = 0; i < numMoves; ++i) {
     engine.search(searchDepth);
-    engine.dumpPosition();
+    engine.dumpPosition(os);
   }
   auto end = std::chrono::high_resolution_clock::now();
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -96,9 +112,25 @@ void printBestMove(const std::string& fen) {
   std::cout << std::visit([](auto&& arg){ return arg.uci(); }, engine.search()) << '\n';
 }
 
-void printNewFen(const std::string& oldFen, const std::string& uciMove) {
-  SearchEngine engine(oldFen);
-  engine.advance(uciToMove(uciMove, engine.getPosition()));
+struct MakeMoveArgs { std::string oldFen, uciMove; };
+MakeMoveArgs parseMakeMoveArgs(int argc, const char* argv[]) {
+  MakeMoveArgs args{};
+  for (int i = 2; i+1 < argc; i+=2) {
+    if (std::string(argv[i]) == "-f" || std::string(argv[i]) == "--fen") {
+      args.oldFen = std::string(argv[i + 1]);
+    } else if (std::string(argv[i]) == "-m" || std::string(argv[i]) == "--move") {
+      args.uciMove = std::string(argv[i + 1]);
+    } else {
+      std::cout << "Invalid flag: " << argv[i] << '\n';
+      exit(-1);
+    }
+  }
+  return args;
+}
+
+void printNewFen(const MakeMoveArgs& args) {
+  SearchEngine engine(args.oldFen);
+  engine.advance(uciToMove(args.uciMove, engine.getPosition()));
   std::cout << engine.getPosition().toFen() << '\n';
 }
 
@@ -118,8 +150,8 @@ int main(int argc, const char* argv[]) {
   }
 
   // simulate self-play with variable number of moves and variable search depth from default position
-  if (argc <= 6 && (std::string(argv[1]) == "--simulate" || std::string(argv[1]) == "-sim")) {
-    simulateSelfPlay(parseSelfPlayArgs(argc, argv)); // defaults to simulation of 100 moves at depth 6
+  if (argc <= 10 && argc % 2 == 0 && (std::string(argv[1]) == "--simulate" || std::string(argv[1]) == "-sim")) {
+    simulateSelfPlay(parseSelfPlayArgs(argc, argv), argv[0]); // defaults to simulation of 100 moves at depth 6
     return 0;
   }
 
@@ -138,16 +170,12 @@ int main(int argc, const char* argv[]) {
   // compute new fen from uci move applied to fen
   if (std::string(argv[1]) == "--make-move" || std::string(argv[1]) == "-mm") {
     if (argc == 6) { // with flags: --make-move --fen <fen> --move <move>
-      auto [oldFen, uciMove] = parseMakeMoveArgs(argc, argv);
-      printNewFen(oldFen, uciMove);
+      printNewFen(parseMakeMoveArgs(argc, argv));
+      return 0;
     } else if (argc == 4) { // without flags: --make-move <fen> <move>
-      printNewFen(argv[2], argv[3]);
-    } else {
-      std::cout << "Invalid number of arguments for make-move\n\n";
-      printUsage(argv[0]);
-      return -1;
+      printNewFen({ argv[2], argv[3] });
+      return 0;
     }
-    return 0;
   }
 
   // bad arguments
