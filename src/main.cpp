@@ -24,6 +24,7 @@ void printEngineInfo() {
 void printUsage(const char* pathToExe) {
   std::cout << "Usage:\n"
             << "   " << pathToExe << " [--help|-h]\n"
+            << "   " << pathToExe << " --perft --depth|-d <depth> [--fen|-f <fen>]\n"
             << "   " << pathToExe << " --simulate [--num-moves|-n <num_moves>] [--depth|-d <depth>] [--fen|-f <fen>] [--output|-o <outfile>]\n"
             << "   " << pathToExe << " --legal-moves <fen>\n"
             << "   " << pathToExe << " --find-best <fen> [--depth|-d <depth>]\n"
@@ -31,10 +32,58 @@ void printUsage(const char* pathToExe) {
             << "   " << pathToExe << " --make-move --fen|-f <fen> --move|-m <uci>\n\n"
             << "Flags:\n"
             << "   --help|-h: print this help message\n"
+            << "   --perft: conduct a perft test by generating all possible moves up to a specified depth starting from an optionally specified fen\n"
             << "   --simulate: simulate self-play with optionally specified number of moves, search depth, starting fen, and output file (where positions are dumped)\n"
             << "   --legal-moves: print legal moves in uci format for a given fen\n"
             << "   --find-best: find the best move for a given fen and output in uci format with optionally specified search depth\n"
             << "   --make-move: make move in uci format for a given fen and print the new fen\n\n";
+}
+
+u64 perft(Position& pos, int depth) {
+  if (depth == 1) return pos.legalMoves().size();
+  u64 generatedNodes = 0ULL;
+  for (auto move : pos.legalMoves()) {
+    auto tmp = pos;
+    std::visit([&, move](auto&& arg) { tmp.applyMove(arg); }, move);
+    generatedNodes += perft(tmp, depth-1);
+  }
+  return generatedNodes;
+}
+
+struct PerftArgs { int depth; std::optional<std::string> fen; };
+PerftArgs parsePerftArgs(int argc, const char** argv) {
+  PerftArgs args{};
+  for (int i = 2; i < argc; i+=2) {
+    if (argv[i] == std::string("-d") || argv[i] == std::string("--depth")) {
+      for (char c : std::string(argv[i + 1]))
+        if (!isdigit(c)) {
+          std::cout << "Invalid depth (must be nonzero): " << argv[i + 1] << '\n';
+          exit(-1);
+        }
+      args.depth = std::stoi(argv[i + 1]);
+    } else if (argv[i] == std::string("-f") || argv[i] == std::string("--fen")) {
+      args.fen = argv[i + 1];
+    }
+  }
+  return args;
+}
+
+void printPerftResults(const PerftArgs& args) {
+  if (!args.depth) {
+    std::cout << "Invalid depth passed in (must be nonzero)";
+  }
+  int depth = args.depth;
+  std::string fen = args.fen.value_or(std::string(STARTING_FEN));
+  Position startingPos(fen);
+
+  auto start = std::chrono::high_resolution_clock::now();
+  u64 nodes = perft(startingPos, depth);
+  auto end = std::chrono::high_resolution_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+  std::cout << "Perft(" << depth << ") complete!\n\n"
+            << "Time taken:       " << std::setw(12) << duration << " ms\n"
+            << "Nodes generated:  " << std::setw(12) << nodes << " nodes\n"
+            << "Nodes per second: " << std::setw(12) << nodes * 1000 / duration << " nps\n\n";
 }
 
 struct SelfPlayArgs { std::optional<int> numMoves, searchDepth;
@@ -157,6 +206,11 @@ int main(int argc, const char* argv[]) {
   if (argc == 1) {
     printEngineInfo();
     printUsage(argv[0]);
+    return 0;
+  }
+
+  if ((argc == 4 || argc == 6) && (std::string(argv[1]) == "--perft")) {
+    printPerftResults(parsePerftArgs(argc, argv));
     return 0;
   }
 
