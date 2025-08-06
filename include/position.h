@@ -391,9 +391,8 @@ private:
   u64 attackedSquaresAlongLaneFromSquare(int square, Color color) const noexcept {
     u64 attackRay = Attacks::getSlidingAttackBitmap(square, upwardLane);
     u64 piecesOnLane = filterOccupiedSquares(attackRay);
-    if (!piecesOnLane) // no blockers - free lane
-      return attackRay;
-    return attackRay & ~Attacks::getSlidingAttackBitmap(BitUtils::ctz(piecesOnLane), upwardLane);
+    return attackRay
+     & ~Attacks::getSlidingAttackBitmap(BitUtils::ctz(piecesOnLane), upwardLane);
   }
 
   template<Direction downwardLane>
@@ -401,9 +400,7 @@ private:
   u64 attackedSquaresAlongLaneFromSquare(int square, Color color) const noexcept {
     u64 attackRay = Attacks::getSlidingAttackBitmap(square, downwardLane);
     u64 piecesOnLane = filterOccupiedSquares(attackRay);
-    if (!piecesOnLane) // no blockers - free lane
-      return attackRay;
-    return attackRay & ~Attacks::getSlidingAttackBitmap(63 ^ BitUtils::clz(piecesOnLane), downwardLane);
+    return attackRay & ~Attacks::getSlidingAttackBitmap(63 ^ BitUtils::clz(piecesOnLane | (piecesOnLane == 0)), downwardLane);
   }
 
   /////////////////////////

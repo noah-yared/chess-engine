@@ -57,19 +57,13 @@ inline constexpr std::array<u64, SQUARES> compileKingAttacks() noexcept {
     return kingAttacks;
 }
 
-inline constexpr std::array<std::array<u64, NUM_DIRECTIONS>, SQUARES> compileSlidingAttacks() noexcept {
-    std::array<std::array<u64, NUM_DIRECTIONS>, SQUARES> slidingAttacks{};
+inline constexpr std::array<std::array<u64, NUM_DIRECTIONS>, SQUARES + 1> compileSlidingAttacks() noexcept {
+    std::array<std::array<u64, NUM_DIRECTIONS>, SQUARES + 1> slidingAttacks{};
     for (int i = 0; i < SQUARES; i++)
         for (int dir = 0; dir < NUM_DIRECTIONS; dir++)
             slidingAttacks[i][dir] = getAttackBitmapAlongDirection(i, Direction(dir));
     return slidingAttacks;
 }
-
-// namespace OldAttacks {
-// inline constexpr auto kingAttackBitmaps = compileKingAttacks();
-// inline constexpr auto knightAttackBitmaps = compileKnightAttacks();
-// inline constexpr auto slidingAttackBitmaps = compileSlidingAttacks();
-// } // namespace Attacks
 
 // Pre-computed attack bitmaps
 class Attacks {
