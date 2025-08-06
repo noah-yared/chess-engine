@@ -14,6 +14,8 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -fsanitize=address -f
 # remove exception handling and rtti and enable optimizations
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native -fomit-frame-pointer -flto -fno-exceptions -fno-rtti -DNDEBUG")
 
+set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG")
+
 # generate engine_config.h
 configure_file(${CMAKE_SOURCE_DIR}/include/engine_config.h.in ${CMAKE_BINARY_DIR}/engine_config.h)
 
