@@ -24,11 +24,17 @@ void printEngineInfo() {
 void printUsage(const char* pathToExe) {
   std::cout << "Usage:\n"
             << "   " << pathToExe << " [--help|-h]\n"
-            << "   " << pathToExe << " --simulate|-sim [--num-moves|-n <num_moves>] [--search-depth|-d <search_depth>] [--fen|-f <fen>] [--output|-o <output_file>]\n"
-            << "   " << pathToExe << " --legal-moves|-lm <fen>\n"
-            << "   " << pathToExe << " --find-best|-fb <fen>\n"
-            << "   " << pathToExe << " --make-move|-mm <fen> <uci_move>\n"
-            << "   " << pathToExe << " --make-move|-mm --fen|-f <fen> --move|-m <uci_move>\n\n";
+            << "   " << pathToExe << " --simulate [--num-moves|-n <num_moves>] [--depth|-d <depth>] [--fen|-f <fen>] [--output|-o <outfile>]\n"
+            << "   " << pathToExe << " --legal-moves <fen>\n"
+            << "   " << pathToExe << " --find-best <fen>\n"
+            << "   " << pathToExe << " --make-move <fen> <uci>\n"
+            << "   " << pathToExe << " --make-move --fen|-f <fen> --move|-m <uci>\n\n"
+            << "Flags:\n"
+            << "   --help|-h: print this help message\n"
+            << "   --simulate: simulate self-play with optionally specified number of moves, search depth, starting fen, and output file (where positions are dumped to)\n"
+            << "   --legal-moves: print legal moves in uci format for a given fen\n"
+            << "   --find-best: find the best move for a given fen and output in uci format\n"
+            << "   --make-move: make move in uci format for a given fen and print the new fen\n\n";
 }
 
 struct SelfPlayArgs { std::optional<int> numMoves, searchDepth;
@@ -44,7 +50,7 @@ SelfPlayArgs parseSelfPlayArgs(int argc, const char* argv[]) {
           exit(-1);
         }
       args.numMoves = std::stoi(argv[i + 1]);
-    } else if (std::string(argv[i]) == "-d" || std::string(argv[i]) == "--search-depth") {
+    } else if (std::string(argv[i]) == "-d" || std::string(argv[i]) == "--depth") {
       for (char c : std::string(argv[i + 1]))
         if (!isdigit(c)) {
           std::cout << "Invalid search depth: " << argv[i + 1] << '\n';
@@ -150,25 +156,25 @@ int main(int argc, const char* argv[]) {
   }
 
   // simulate self-play with variable number of moves and variable search depth from default position
-  if (argc <= 10 && argc % 2 == 0 && (std::string(argv[1]) == "--simulate" || std::string(argv[1]) == "-sim")) {
+  if (argc <= 10 && argc % 2 == 0 && std::string(argv[1]) == "--simulate") {
     simulateSelfPlay(parseSelfPlayArgs(argc, argv), argv[0]); // defaults to simulation of 100 moves at depth 6
     return 0;
   }
 
   // generate legal moves from fen
-  if (argc == 3 && (std::string(argv[1]) == "--legal-moves" || std::string(argv[1]) == "-lm")) {
+  if (argc == 3 && std::string(argv[1]) == "--legal-moves") {
     printLegalMoves(argv[2]);
     return 0;
   }
 
   // calculate best move from fen
-  if (argc == 3 && (std::string(argv[1]) == "--find-best" || std::string(argv[1]) == "-fb")) {
+  if (argc == 3 && std::string(argv[1]) == "--find-best") {
     printBestMove(argv[2]);
     return 0;
   }
 
   // compute new fen from uci move applied to fen
-  if (std::string(argv[1]) == "--make-move" || std::string(argv[1]) == "-mm") {
+  if (std::string(argv[1]) == "--make-move") {
     if (argc == 6) { // with flags: --make-move --fen <fen> --move <move>
       printNewFen(parseMakeMoveArgs(argc, argv));
       return 0;
