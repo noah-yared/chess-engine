@@ -78,7 +78,7 @@ std::string Bitboards::toString() const noexcept {
     for (int c = 7; c >= 0; --c) {
       int sq = r * FILES + c;
       if (auto pType = getPieceType(sq); pType != PieceType::NONE) {
-        assert(pType <= PiecType::KING && "Invalid piece type!");
+        assert(pType <= PieceType::KING && "Invalid piece type!");
         bool isWhite = whiteBB() & (1ULL << sq);
         ss << pieceString[pieceToKey(pType, isWhite ? Color::WHITE : Color::BLACK)];
       } else {
