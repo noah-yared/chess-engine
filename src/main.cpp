@@ -26,14 +26,14 @@ void printUsage(const char* pathToExe) {
             << "   " << pathToExe << " [--help|-h]\n"
             << "   " << pathToExe << " --simulate [--num-moves|-n <num_moves>] [--depth|-d <depth>] [--fen|-f <fen>] [--output|-o <outfile>]\n"
             << "   " << pathToExe << " --legal-moves <fen>\n"
-            << "   " << pathToExe << " --find-best <fen>\n"
+            << "   " << pathToExe << " --find-best <fen> [--depth|-d <depth>]\n"
             << "   " << pathToExe << " --make-move <fen> <uci>\n"
             << "   " << pathToExe << " --make-move --fen|-f <fen> --move|-m <uci>\n\n"
             << "Flags:\n"
             << "   --help|-h: print this help message\n"
-            << "   --simulate: simulate self-play with optionally specified number of moves, search depth, starting fen, and output file (where positions are dumped to)\n"
+            << "   --simulate: simulate self-play with optionally specified number of moves, search depth, starting fen, and output file (where positions are dumped)\n"
             << "   --legal-moves: print legal moves in uci format for a given fen\n"
-            << "   --find-best: find the best move for a given fen and output in uci format\n"
+            << "   --find-best: find the best move for a given fen and output in uci format with optionally specified search depth\n"
             << "   --make-move: make move in uci format for a given fen and print the new fen\n\n";
 }
 
@@ -113,9 +113,21 @@ void printLegalMoves(const std::string& fen) {
   std::cout << pos.legalMoves() << '\n';
 }
 
-void printBestMove(const std::string& fen) {
-  SearchEngine engine(fen);
-  std::cout << std::visit([](auto&& arg){ return arg.uci(); }, engine.search()) << '\n';
+void printBestMove(int argc, const char** argv) {
+  SearchEngine engine(argv[1]);
+  if (argc == 5 && (std::string(argv[3]) == "-d" || std::string(argv[3]) == "--depth")) {
+    for (char c : std::string(argv[4]))
+      if (!isdigit(c)) {
+        std::cout << "Invalid depth: " << argv[4] << '\n';
+        exit(-1);
+      }
+    std::cout << std::visit([](auto&& arg){ return arg.uci(); }, engine.search(std::stoi(argv[4]))) << '\n';
+  } else if (argc == 3) {
+    std::cout << std::visit([](auto&& arg){ return arg.uci(); }, engine.search()) << '\n';
+  } else {
+    std::cout << "Invalid flag for find-best\n";
+    exit(-1);
+  }
 }
 
 struct MakeMoveArgs { std::string oldFen, uciMove; };
@@ -168,8 +180,8 @@ int main(int argc, const char* argv[]) {
   }
 
   // calculate best move from fen
-  if (argc == 3 && std::string(argv[1]) == "--find-best") {
-    printBestMove(argv[2]);
+  if ((argc == 3 || argc == 5) && std::string(argv[1]) == "--find-best") {
+    printBestMove(argc, argv);
     return 0;
   }
 
