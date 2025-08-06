@@ -10,7 +10,7 @@ protected:
 
 TEST_F(CheckDetectionTest, HandlesUnthreatenedKing) {
   // no pins, no checks
-  loadFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+  loadStartingPosition();
   EXPECT_FALSE(isKingInCheck(Color::WHITE));
   EXPECT_FALSE(isKingInCheck(Color::BLACK));
 
