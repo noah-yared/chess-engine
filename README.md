@@ -1,84 +1,16 @@
-# Chess Engine - Modern C++ Implementation
+# Chess Engine
 
-A high-performance chess engine built with modern C++17/20 features, demonstrating fundamental software engineering practices and efficient chess algorithms.
+A performant chess engine built with modern C++17/20 features.
 
-## 🚀 Recent Major Refactor
+## Technical Highlights
 
-This project has evolved significantly from its initial implementation. The current version represents a complete architectural rewrite using modern C++17/20 features, resulting in:
+- **Template metaprogramming** for compile-time optimizations
+- **Advanced bitwise operations** with bitboards for efficient piece manipulation
+- **Memory-efficient transposition table** with sophisticated bitfield design
+- **Type-safe move system** with template specializations
+- **Alpha-beta search** with iterative deepening
 
-- **Modern C++17/20** with `<bit>`, `<concepts>`, `<variant>`, constexpr, fold expressions, template specializations, etc.
-- **Clean architecture** with proper separation of concerns
-- **Type-safe design** throughout the codebase
-- **Efficient bitboard operations** for performance
-
-## ✨ Technical Highlights
-
-### Modern C++ Features
-- **Template metaprogramming** for type safety and compile-time optimization
-- **C++20 concepts** and `requires` clauses for compile-time validation
-- **Constexpr functions** for precomputed attack patterns
-- **Variadic templates** for flexible attack detection
-- **Template specializations** for compile-time dispatch
-- **Advanced bit manipulation** with bitboards using <bit>
-
-
-### Architecture
-- **Clean separation of concerns** between move generation, attack detection, and state management
-- **Type-safe move system** with template specializations for different move types
-- **Efficient position representation** using bitboards
-- **Zobrist hashing** for position identification and transposition tables
-- **Comprehensive state management** with snapshot capabilities
-
-### Performance Optimizations
-- **Bitboard-centric design** for efficient piece operations
-- **Precomputed attack patterns** for sliding pieces
-- **Optimized move generation** pipeline
-- **Memory-efficient transposition table** with packed bitfields
-
-## 🏗️ Core Components
-
-### Position Management (`position.h`)
-- **Efficient move application and undo** with state snapshots
-- **Comprehensive attack detection** with variadic templates
-- **Type-safe move validation** and generation
-
-### Bitboard Operations (`bitboards.h`, `bit_utils.h`)
-- **Optimized bitboard manipulation** for chess piece operations
-- **Precomputed attack patterns** for all piece types
-- **Efficient filtering and clearing** operations
-
-### Transposition Table (`transposition_table.h`)
-- **Sophisticated bitfield design** with template metaprogramming
-- **Memory-efficient storage** (12 bytes per entry)
-- **Advanced field layout** with compile-time validation
-
-### Move System (`move.h`, `move_list.h`)
-- **Type-safe move representation** with template specializations
-- **Comprehensive move types** (normal, castling, en passant, promotion)
-- **Efficient move list management**
-
-## 🔧 Current Status
-
-### ✅ Completed
-- **Core architecture** with modern C++20
-- **Clean, maintainable codebase**
-- **Efficient move generation** pipeline
-- **Advanced attack detection** algorithms
-- **Type-safe design** throughout
-
-### 🔄 In Progress
-- **Comprehensive test suite** development
-- **Bug fixes** and edge case handling
-- **Performance optimization** and benchmarking
-- **Move ordering** improvements
-
-### 📋 Planned
-- **Quiescence search** implementation
-- **Advanced evaluation** heuristics
-- **Opening book** integration
-- **UCI protocol** support
-
-## 🛠️ Build & Run
+## Build & Run
 
 ### Prerequisites
 - **C++20 compatible compiler** (GCC 10+, Clang 12+, MSVC 2019+)
@@ -86,57 +18,71 @@ This project has evolved significantly from its initial implementation. The curr
 
 ### Build Instructions
 ```bash
-# Clone the repository
 git clone https://github.com/noah-yared/chess-engine.git
 cd chess-engine
 
-# Configure the build
-cmake -S . -B build
+# Create build directory
+mkdir build && cd build
 
-# Build the project
-cd build
-cmake --build .
+# Configure build for release mode
+cmake -DCMAKE_BUILD_TYPE=Release ..
 
-# Run engine
-./engine
+# Build the engine
+make
 ```
 
-## 🧪 Testing
-
-The project includes comprehensive test suites covering (work in progress):
-- **Move generation** for all piece types
-- **Position state management** and validation
-- **Attack detection** algorithms
-- **Move application** and undo operations
-- **Edge cases** and special moves
+## Usage
 
 ```bash
-# If not already in build directory
-cd ./path/to/build 
-# Run all tests (work in progress)
+# Show help
+./engine --help
+
+# Generate legal moves from a FEN string
+./engine --legal-moves "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+# Find best move with depth 6
+./engine --find-best "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" --depth 6
+
+# Apply move to a FEN string
+./engine --make-move --fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" --move "e2e4"
+
+# Simulate self-play from the default starting FEN for 50 moves with search depth 6, dumping positions to "out.txt"
+./engine --simulate --num-moves 50 --depth 6 --output out.txt
+```
+
+## Testing
+
+```bash
+# Run move generation tests
+ctest -R "MoveGeneration"
+
+# Run check detection tests
+ctest -R "CheckDetection"
+
+# Run move apply/undo tests
+ctest -R "Move(Apply|Undo)"
+
+# Run all tests
 ctest
 ```
 
-## 📊 Performance
+## Benchmarks
 
-The refactored engine demonstrates significant improvements:
-- **Faster move generation** through optimized bitboard operations
-- **Reduced memory usage** with efficient data structures
-- **Better cache locality** with modern C++ design patterns
-- **Compile-time optimizations** through template metaprogramming
-- **Addition of transposition table** for improved search performance
-- **Compile-time dispatch** for move generation with template specializations
+```bash
+# Run move generation benchmark
+./bench_move_generation
 
-## 🎯 Development Philosophy
+# Run static evaluation benchmark
+./bench_static_eval
 
-This project demonstrates:
-- **Modern C++ best practices** and modern language features
-- **Clean architecture** and separation of concerns
-- **Performance-conscious design** with bitboard operations
-- **Type safety** through template metaprogramming
-- **Iterative improvement** and code quality focus
+# Run move apply/undo benchmark
+./bench_move_apply
 
+# Run search benchmark
+./bench_search
 
----
-
-*This project represents a significant evolution in both chess engine development and modern C++ programming practices. The refactored codebase demonstrates fundamental software engineering principles while maintaining the core functionality of a competitive chess engine.* 
+# Run all benchmarks
+for exe in ./bench_*; do
+  "$exe"
+done
+```
