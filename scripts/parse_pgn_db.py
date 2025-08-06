@@ -4,7 +4,7 @@ from typing import IO
 import chess.pgn
 
 COMPRESSED_PGN_FILE_PATH = './data/lichess_db_standard_rated_2015-01.pgn.zst'
-OUTPUT_FEN_FILE_PATH = '../tests/data/fen_data.txt'
+OUTPUT_FEN_FILE_PATH = './data/fen_data.txt'
 
 def pipe_decompressed_pgn_zst(input_file_path: str) -> subprocess.Popen:
     with open(input_file_path, 'r') as input_file:
