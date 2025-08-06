@@ -3,6 +3,7 @@
 #include <array>
 #include <bit>
 #include <limits>
+#include <string>
 
 #include "pieces.h"
 #include "platform.h"
@@ -131,3 +132,5 @@ inline u64 PAWN_PROMOTION_RANK_MASK(Color c) noexcept {
 }
 
 constexpr u64 DEFAULT_SEED = 0xdecafc0ffeecafeULL;
+
+constexpr std::string_view STARTING_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";

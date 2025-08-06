@@ -43,7 +43,7 @@ public:
   // Factory Methods     //
   /////////////////////////
   static Position fromStartingPosition() noexcept {
-    return Position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    return Position(std::string(STARTING_FEN));
   }
 
   static Position fromAscii(const std::string& asciiBoard, const std::string turn = "w",
