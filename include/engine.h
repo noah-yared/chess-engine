@@ -16,129 +16,149 @@
 #include "transposition_table.h"
 #include "zobrist_hasher.h"
 
-class SearchEngine {
-private:
-  Position position_;
-  StateStack<BoardStateSnapshot> undoStack_;
-  TranspositionTable tt_;
-  u64 nodesSearched_;
+class SearchEngine
+{
+  private:
+    Position position_;
+    StateStack<BoardStateSnapshot> undoStack_;
+    TranspositionTable tt_;
+    u64 nodesSearched_;
 
-  // private constructor for testing
-  explicit SearchEngine(const Position& position, size_t ttSize) noexcept : position_{position}, undoStack_{}, tt_{ttSize}, nodesSearched_{0ULL} {};
+    // private constructor for testing
+    explicit SearchEngine(const Position& position, size_t ttSize) noexcept
+        : position_{position}, undoStack_{}, tt_{ttSize}, nodesSearched_{0ULL} {};
 
-  struct Line {
-    std::optional<MoveVariant> move = std::nullopt;
-    int score;
-  };
+    struct Line
+    {
+        std::optional<MoveVariant> move = std::nullopt;
+        int score;
+    };
 
-  struct TTEvaluation {
-    int score;
-    Bound bound = Bound::EXACT;
-    TTEvaluation(int score, Bound bound) noexcept : score(score), bound(bound) {};
-  };
+    struct TTEvaluation
+    {
+        int score;
+        Bound bound = Bound::EXACT;
+        TTEvaluation(int score, Bound bound) noexcept : score(score), bound(bound) {};
+    };
 
-  [[nodiscard]] static std::pair<int, int> getStep(MoveVariant moveVariant) noexcept {
-    return std::visit(
-      [](auto&& move) noexcept -> std::pair<int, int> { return { move.start(), move.end() }; },
-      moveVariant
-    );
-  }
-
-  [[nodiscard]] static Bound getBound(int score, int alpha, int beta) noexcept {
-    if (score < alpha) return Bound::UPPER;
-    if (score > beta) return Bound::LOWER;
-    return Bound::EXACT;
-  };
-
-  [[nodiscard]] std::optional<TTEvaluation> ttEvalLookup(int depth) noexcept {
-    if (auto maybeEntry = tt_.probe(position_.getHash()); maybeEntry)
-      if (auto& ttEntry = *(*maybeEntry); ttEntry.hasAtLeastDepth(depth))
-        return TTEvaluation( ttEntry.getEval(), ttEntry.getBound() );
-    return std::nullopt;
-  }
-
-  void ttEvalStore(int score, int depth, int alpha, int beta, MoveVariant bestMove) noexcept {
-    tt_.store(position_.getHash(), score, depth, getBound(score, alpha, beta), getStep(bestMove));
-  }
-
-  int getTTScoreOrSearch(int& alpha, int& beta, int depth, bool isMaximizingPlayer, Color color) noexcept {
-    if (auto ttEval = ttEvalLookup(depth); ttEval.has_value()) {
-      switch (ttEval->bound) {
-        case Bound::EXACT:
-          return ttEval->score;
-        case Bound::UPPER:
-          beta = std::min(beta, ttEval->score); break;
-        case Bound::LOWER:
-          alpha = std::max(alpha, ttEval->score); break;
-      }
+    [[nodiscard]] static std::pair<int, int> getStep(MoveVariant moveVariant) noexcept
+    {
+        return std::visit([](auto&& move) noexcept -> std::pair<int, int>
+                          { return {move.start(), move.end()}; }, moveVariant);
     }
-    return alphaBeta(alpha, beta, depth-1, !isMaximizingPlayer, opposite(color)).score;
-  }
 
-  Line alphaBeta(int alpha, int beta, int depth, bool isMaximizingPlayer, Color color) noexcept {
-    if (!depth) // end of search reached, return final eval
-      return { .score = position_.evaluation() };
-    const auto possibleMoves = position_.legalMoves();
-    nodesSearched_ += possibleMoves.size();
-    if (possibleMoves.isEmpty()) // end of game reached, return final eval
-      return { .score = position_.evaluation() };
-    int originalAlpha = alpha, originalBeta = beta;
-    auto bestMove = *(possibleMoves.begin());
-    for (const auto move : possibleMoves) {
-      advance(move);
-      int eval = getTTScoreOrSearch(alpha, beta, depth, isMaximizingPlayer, color);
-      backtrack(move);
-      if (isMaximizingPlayer ? (eval > alpha) : (eval < beta))
-        bestMove = move, isMaximizingPlayer ? (alpha = eval) : (beta = eval);
-      if (beta <= alpha)
-        break; // prune branch
+    [[nodiscard]] static Bound getBound(int score, int alpha, int beta) noexcept
+    {
+        if (score < alpha)
+            return Bound::UPPER;
+        if (score > beta)
+            return Bound::LOWER;
+        return Bound::EXACT;
+    };
+
+    [[nodiscard]] std::optional<TTEvaluation> ttEvalLookup(int depth) noexcept
+    {
+        if (auto maybeEntry = tt_.probe(position_.getHash()); maybeEntry)
+            if (auto& ttEntry = *(*maybeEntry); ttEntry.hasAtLeastDepth(depth))
+                return TTEvaluation(ttEntry.getEval(), ttEntry.getBound());
+        return std::nullopt;
     }
-    ttEvalStore(isMaximizingPlayer ? alpha : beta, depth, originalAlpha, originalBeta, bestMove);
-    return Line{ .move = bestMove, .score = isMaximizingPlayer ? alpha : beta };
-  }
 
-public:
-  SearchEngine() noexcept : position_{}, undoStack_{}, tt_{}, nodesSearched_{0ULL} {};
-  explicit SearchEngine(const std::string& fen) noexcept : position_{fen}, undoStack_{}, tt_{}, nodesSearched_{0ULL} {};
+    void ttEvalStore(int score, int depth, int alpha, int beta, MoveVariant bestMove) noexcept
+    {
+        tt_.store(position_.getHash(), score, depth, getBound(score, alpha, beta),
+                  getStep(bestMove));
+    }
 
-  // Factory method for testing - creates engine without transposition table allocation
-  [[nodiscard]] static SearchEngine withEmptyTTForTesting(const Position& position) noexcept {
-    return SearchEngine(position, 0);
-  }
+    int getTTScoreOrSearch(int& alpha, int& beta, int depth, bool isMaximizingPlayer,
+                           Color color) noexcept
+    {
+        if (auto ttEval = ttEvalLookup(depth); ttEval.has_value())
+        {
+            switch (ttEval->bound)
+            {
+            case Bound::EXACT:
+                return ttEval->score;
+            case Bound::UPPER:
+                beta = std::min(beta, ttEval->score);
+                break;
+            case Bound::LOWER:
+                alpha = std::max(alpha, ttEval->score);
+                break;
+            }
+        }
+        return alphaBeta(alpha, beta, depth - 1, !isMaximizingPlayer, opposite(color)).score;
+    }
 
-  // prevent copying (very memory intensive)
-  SearchEngine(const SearchEngine&) = delete; 
-  SearchEngine operator=(const SearchEngine&) = delete;
+    Line alphaBeta(int alpha, int beta, int depth, bool isMaximizingPlayer, Color color) noexcept
+    {
+        if (!depth) // end of search reached, return final eval
+            return {.score = position_.evaluation()};
+        const auto possibleMoves = position_.legalMoves();
+        nodesSearched_ += possibleMoves.size();
+        if (possibleMoves.isEmpty()) // end of game reached, return final eval
+            return {.score = position_.evaluation()};
+        int originalAlpha = alpha, originalBeta = beta;
+        auto bestMove = *(possibleMoves.begin());
+        for (const auto move : possibleMoves)
+        {
+            advance(move);
+            int eval = getTTScoreOrSearch(alpha, beta, depth, isMaximizingPlayer, color);
+            backtrack(move);
+            if (isMaximizingPlayer ? (eval > alpha) : (eval < beta))
+                bestMove = move, isMaximizingPlayer ? (alpha = eval) : (beta = eval);
+            if (beta <= alpha)
+                break; // prune branch
+        }
+        ttEvalStore(isMaximizingPlayer ? alpha : beta, depth, originalAlpha, originalBeta,
+                    bestMove);
+        return Line{.move = bestMove, .score = isMaximizingPlayer ? alpha : beta};
+    }
 
-  void advance(MoveVariant variant) noexcept {
-    undoStack_.push(position_.getStateSnapshot());
-    std::visit(
-        [this](auto&& move) noexcept {
-          position_.applyMove<std::decay_t<decltype(move)>::type>( move );
-        }, variant);
-  }
+  public:
+    SearchEngine() noexcept : position_{}, undoStack_{}, tt_{}, nodesSearched_{0ULL} {};
+    explicit SearchEngine(const std::string& fen) noexcept
+        : position_{fen}, undoStack_{}, tt_{}, nodesSearched_{0ULL} {};
 
-  void backtrack(MoveVariant variant) noexcept {
-    std::visit(
-        [this](auto&& move) noexcept {
-          position_.undoMove<std::decay_t<decltype(move)>::type>( move, undoStack_.pop() );
-        }, variant);
-  }
+    // Factory method for testing - creates engine without transposition table allocation
+    [[nodiscard]] static SearchEngine withEmptyTTForTesting(const Position& position) noexcept
+    {
+        return SearchEngine(position, 0);
+    }
 
-  MoveVariant search(int depth = SEARCH_DEPTH) noexcept {
-    undoStack_.clear();
-    auto [ maybeMove, score ] = alphaBeta(
-        NEGINF, POSINF, depth, position_.isWhiteToMove(), position_.sideToMove());
-    assert(maybeMove && "game is over, no further moves can be played!");
-    assert(position_.legalMoves().contains(*maybeMove) && "move not found in legal moves");
-    advance(*maybeMove);
-    return *maybeMove;
-  }
+    // prevent copying (very memory intensive)
+    SearchEngine(const SearchEngine&) = delete;
+    SearchEngine operator=(const SearchEngine&) = delete;
 
-  const Position& getPosition() const noexcept { return position_; }
+    void advance(MoveVariant variant) noexcept
+    {
+        undoStack_.push(position_.getStateSnapshot());
+        std::visit([this](auto&& move) noexcept
+                   { position_.applyMove<std::decay_t<decltype(move)>::type>(move); }, variant);
+    }
 
-  void dumpPosition(std::ostream& os = std::cout) const noexcept { os << position_ << '\n'; }  
+    void backtrack(MoveVariant variant) noexcept
+    {
+        std::visit(
+            [this](auto&& move) noexcept
+            { position_.undoMove<std::decay_t<decltype(move)>::type>(move, undoStack_.pop()); },
+            variant);
+    }
 
-  u64 getNodesSearchedCount() const noexcept { return nodesSearched_; }
+    MoveVariant search(int depth = SEARCH_DEPTH) noexcept
+    {
+        undoStack_.clear();
+        auto [maybeMove, score] =
+            alphaBeta(NEGINF, POSINF, depth, position_.isWhiteToMove(), position_.sideToMove());
+        assert(maybeMove && "game is over, no further moves can be played!");
+        assert(position_.legalMoves().contains(*maybeMove) && "move not found in legal moves");
+        advance(*maybeMove);
+        return *maybeMove;
+    }
 
+    const Position& getPosition() const noexcept { return position_; }
+
+    void dumpPosition(std::ostream& os = std::cout) const noexcept { os << position_ << '\n'; }
+
+    u64 getNodesSearchedCount() const noexcept { return nodesSearched_; }
 };

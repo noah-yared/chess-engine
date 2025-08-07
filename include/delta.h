@@ -6,11 +6,12 @@
 /*
  * store following info for piece square updates:
  * @key: piece bitboard index
- * @square: bit index of piece bitboard 
+ * @square: bit index of piece bitboard
  */
-struct Delta {
-  int key, square;
+struct Delta
+{
+    int key, square;
 
-  static Delta Place(int key, int square) noexcept { return { key, square }; }
-  static Delta Remove(int key, int square) noexcept { return { key, square }; }
+    static Delta Place(int key, int square) noexcept { return {key, square}; }
+    static Delta Remove(int key, int square) noexcept { return {key, square}; }
 };

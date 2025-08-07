@@ -26,13 +26,16 @@ LOG_DIR = SCRIPT_DIR / "logs"
 LOG_FILE = SCRIPT_DIR / "logs" / "mvgen_errors.log"
 OUT_FILE = SCRIPT_DIR / "logs" / "mvgen_out.log"
 
+
 def print_to_err_log(message: str) -> None:
     with open(LOG_FILE, "a") as f:
         f.write(message)
 
+
 def print_to_out_log(message: str) -> None:
     with open(OUT_FILE, "a") as f:
         f.write(message)
+
 
 def print_board(fen: str) -> None:
     pieces, turn, castling, enpassant, *_ = fen.split(" ")
@@ -43,29 +46,30 @@ def print_board(fen: str) -> None:
         f"enpassant: {enpassant}\n"
         f"------------------------\n"
     )
-    for row in pieces.split('/'):
+    for row in pieces.split("/"):
         for c in row:
-            if c.isalpha(): 
-                print_to_err_log(c)    
+            if c.isalpha():
+                print_to_err_log(c)
             else:
-                print_to_err_log(int(c)*".")
+                print_to_err_log(int(c) * ".")
         print_to_err_log("\n")
     # print_to_err_log(f"------------------------\n")
+
 
 def get_num_fens() -> int:
     # Try ripgrep first (much faster for large files)
     try:
         result = subprocess.run(
-            ['rg', '--count', r'\w', FEN_DATA_PATH],
+            ["rg", "--count", r"\w", FEN_DATA_PATH],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=30,
         )
         if result.returncode == 0:
             return int(result.stdout.strip())
     except (subprocess.TimeoutExpired, FileNotFoundError, ValueError):
         pass
-    
+
     # Fallback to Python (slower but more portable)
     try:
         with open(FEN_DATA_PATH, "r") as f:
@@ -74,40 +78,45 @@ def get_num_fens() -> int:
         print(f"Error: FEN data file not found at {FEN_DATA_PATH}")
         sys.exit(1)
 
-def fens(lock: AcquirerProxy, fen_test_batch_size: int=DEFAULT_FEN_TEST_BATCH_SIZE) -> Generator[tuple[str, AcquirerProxy], None, None]:
+
+def fens(
+    lock: AcquirerProxy, fen_test_batch_size: int = DEFAULT_FEN_TEST_BATCH_SIZE
+) -> Generator[tuple[str, AcquirerProxy], None, None]:
     try:
         with open(FEN_DATA_PATH, "r") as f:
             consumed_fens = 0
             for line in f:
-                if (data := line.strip()):  # Skip empty lines
+                if data := line.strip():  # Skip empty lines
                     yield data, lock
                     consumed_fens += 1
-                if consumed_fens >= fen_test_batch_size:    
-                    return # close generator
+                if consumed_fens >= fen_test_batch_size:
+                    return  # close generator
     except FileNotFoundError:
         print(f"Error: FEN data file not found at {FEN_DATA_PATH}")
         sys.exit(1)
 
+
 def build_engine():
     try:
         subprocess.run(
-            ['cmake', '--build', ENGINE_BUILD_PATH],
+            ["cmake", "--build", ENGINE_BUILD_PATH],
             capture_output=True,
             text=True,
-            check=True
+            check=True,
         )
     except subprocess.CalledProcessError as e:
         print(f"Error while building engine: {e}")
         print(f"Build stdout: {e.stdout}")
         print(f"Build stderr: {e.stderr}")
 
+
 def get_engine_output(fen: str) -> str:
     try:
         result = subprocess.run(
-            [ENGINE_EXECUTABLE, '--legal-moves', fen], 
-            capture_output=True, 
+            [ENGINE_EXECUTABLE, "--legal-moves", fen],
+            capture_output=True,
             text=True,
-            timeout=10  # Add timeout to prevent hanging
+            timeout=10,  # Add timeout to prevent hanging
         )
         if result.returncode != 0:
             print(f"Warning: Engine returned non-zero exit code for FEN: {fen}")
@@ -119,32 +128,36 @@ def get_engine_output(fen: str) -> str:
     except FileNotFoundError:
         print(f"Error: Engine executable not found at {ENGINE_EXECUTABLE}")
         sys.exit(1)
-    
+
 
 def parse_engine_output(engine_output: str) -> set[str]:
-    return set(move.strip() for move in engine_output.strip("MoveList()").split(',') if move.strip())
+    return set(
+        move.strip()
+        for move in engine_output.strip("MoveList()").split(",")
+        if move.strip()
+    )
 
-def actual_generated_moves(fen: str) -> set[str]|None:
+
+def actual_generated_moves(fen: str) -> set[str] | None:
     return parse_engine_output(get_engine_output(fen))
+
 
 def expected_generated_moves(fen: str):
     # ignore promotion index (just uci)
     try:
         board = chess.Board(fen)
-        return {
-            move.uci() for move in board.legal_moves
-            if move.uci()[-1] not in 'rnb'
-        }
+        return {move.uci() for move in board.legal_moves if move.uci()[-1] not in "rnb"}
     except ValueError as e:
         print_to_err_log(f"Warning: Invalid FEN, got error {e}")
         return set()
+
 
 def compare_generated_moves(args: tuple[str, AcquirerProxy]) -> None:
     fen, lock = args
 
     actual = actual_generated_moves(fen)
     expected = expected_generated_moves(fen)
-    
+
     extraneous_moves = actual.difference(expected)
     missing_moves = expected.difference(actual)
 
@@ -162,23 +175,30 @@ def compare_generated_moves(args: tuple[str, AcquirerProxy]) -> None:
             if missing_moves:
                 print_to_err_log(f"Missing moves: {missing_moves}\n\n")
             # print_to_err_log("-------------------------------------------------------\n")
-        
-def validate_move_generation(fen_test_batch_size: int|None=None):
+
+
+def validate_move_generation(fen_test_batch_size: int | None = None):
     with Manager() as manager:
         lock = manager.Lock()
-        fen_generator = fens(lock) \
-                        if fen_test_batch_size is None \
-                        else fens(lock, fen_test_batch_size)
+        fen_generator = (
+            fens(lock)
+            if fen_test_batch_size is None
+            else fens(lock, fen_test_batch_size)
+        )
         with Pool() as pool:
-            for _ in tqdm(pool.imap_unordered(compare_generated_moves, fen_generator), total=fen_test_batch_size):
+            for _ in tqdm(
+                pool.imap_unordered(compare_generated_moves, fen_generator),
+                total=fen_test_batch_size,
+            ):
                 pass
+
 
 if __name__ == "__main__":
 
     if os.path.exists(LOG_FILE):
         LOG_FILE.unlink()
         print(f"Deleted file: {LOG_FILE}")
-        
+
     if os.path.exists(OUT_FILE):
         OUT_FILE.unlink()
         print(f"Deleted file: {OUT_FILE}")
@@ -189,11 +209,10 @@ if __name__ == "__main__":
         print("Executable not found.")
         print("Rebuilding engine...")
         build_engine()
-    
+
     print(f"Testing {DEFAULT_FEN_TEST_BATCH_SIZE} FEN positions...")
 
     start = perf_counter()
     validate_move_generation()
     elapsed_time = perf_counter() - start
     print(f"Took {elapsed_time:.2f}s!")
-
