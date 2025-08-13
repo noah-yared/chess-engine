@@ -54,6 +54,13 @@ struct MoveList
     [[nodiscard]] const MoveVariant* begin() const noexcept { return moveBuffer_.data(); }
     [[nodiscard]] const MoveVariant* end() const noexcept { return moveBuffer_.data() + sz_; }
 
+    // sorting
+    template <typename CompFunc>
+    void sort(CompFunc&& comp) noexcept
+    {
+        std::sort(moveBuffer_.begin(), moveBuffer_.begin() + sz_, comp);
+    }
+
     // Comparison operators
     bool operator==(const MoveList& other) const noexcept;
     bool operator!=(const MoveList& other) const noexcept;
