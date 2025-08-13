@@ -68,7 +68,7 @@ std::string Bitboards::parsePiecePlacement() const noexcept
 {
     std::stringstream ss;
     const std::string pieceStr = "prnbqkPRNBQK";
-    for (int bit = 63, consecutiveEmpty = 0; bit; --bit)
+    for (int bit = 63, consecutiveEmpty = 0; bit >= 0; --bit)
     {
         auto pType = getPieceType(bit);
         if (pType == PieceType::NONE)
