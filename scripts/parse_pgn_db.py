@@ -1,5 +1,5 @@
 import subprocess
-from typing import IO
+from typing import TextIO
 
 import chess.pgn
 
@@ -7,18 +7,17 @@ COMPRESSED_PGN_FILE_PATH = "./data/lichess_db_standard_rated_2015-01.pgn.zst"
 OUTPUT_FEN_FILE_PATH = "./data/fen_data.txt"
 
 
-def pipe_decompressed_pgn_zst(input_file_path: str) -> subprocess.Popen:
-    with open(input_file_path, "r") as input_file:
-        return subprocess.Popen(
-            ["zstd", "-d", "-c", input_file],
-            stdout=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-        )
+def pipe_decompressed_pgn_zst(input_file_path: str) -> subprocess.Popen[str]:
+    return subprocess.Popen(
+        ["zstd", "-d", "-c", input_file_path],
+        stdout=subprocess.PIPE,
+        text=True,
+        encoding="utf-8"
+    )
 
 
 def process_pgn_data_to_fen_and_pipe(
-    input_stream: IO[str], output_stream: IO[str], max_fens_to_process: int
+    input_stream: TextIO, output_stream: TextIO, max_fens_to_process: int
 ) -> None:
     def fen_after_move(board: chess.Board, move: chess.Move) -> str:
         board.push(move)
@@ -45,6 +44,7 @@ def write_unique_fens_to_file_from_compressed_pgns(
 ) -> None:
     with open(output_file_path, "w") as output_file:
         pgn_proc = pipe_decompressed_pgn_zst(input_file_path)
+        assert pgn_proc.stdout is not None
         pgn_proc.stdout.close()  # unused end of pipe for parent process
 
         unique_fen_proc = subprocess.Popen(
@@ -54,6 +54,7 @@ def write_unique_fens_to_file_from_compressed_pgns(
             text=True,
             encoding="utf-8",
         )
+        assert unique_fen_proc.stdout is not None
         unique_fen_proc.stdout.close()  # unused end of pipe for parent process
 
         truncate_fen_proc = subprocess.Popen(
@@ -64,9 +65,11 @@ def write_unique_fens_to_file_from_compressed_pgns(
             encoding="utf-8",
         )
 
+        assert pgn_proc.stdout is not None
+        assert unique_fen_proc.stdin is not None
         process_pgn_data_to_fen_and_pipe(
-            pgn_proc.stdout,
-            unique_fen_proc.stdin,
+            pgn_proc.stdout, # type: ignore
+            unique_fen_proc.stdin, # type: ignore
             max_fens_to_process=max_fens_to_process,
         )
         unique_fen_proc.stdin.close()  # unnecessary, just for completeness (we close write end of pipe in process_pgn_data_to_fen_and_pipe)

@@ -1,10 +1,10 @@
 from multiprocessing import Pool, Manager
-from multiprocessing.managers import AcquirerProxy
 import os
 from pathlib import Path
 import subprocess
 import sys
 from time import perf_counter
+from threading import Lock
 from tqdm import tqdm
 from typing import Generator
 
@@ -13,13 +13,15 @@ import chess
 # Get abs path to directory containing script
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-# Size of fen test batch
-DEFAULT_FEN_TEST_BATCH_SIZE = 10_000
+# Size of fen test batch (configurable)
+DEFAULT_FEN_TEST_BATCH_SIZE = 1_000_000
 
 # define paths relative to directory
 ENGINE_BUILD_PATH = SCRIPT_DIR.parent / "build"
 ENGINE_EXECUTABLE = ENGINE_BUILD_PATH / "engine"
-FEN_DATA_PATH = SCRIPT_DIR / "data" / "fen_data.txt"
+
+# modified for new fens file (consider switching to passing as cl arg)
+FEN_DATA_PATH = SCRIPT_DIR/ "output" / "fens.txt"
 
 LOG_DIR = SCRIPT_DIR / "logs"
 
@@ -37,23 +39,20 @@ def print_to_out_log(message: str) -> None:
         f.write(message)
 
 
-def print_board(fen: str) -> None:
+def print_board_to_err_log(fen: str) -> None:
     pieces, turn, castling, enpassant, *_ = fen.split(" ")
     print_to_err_log(
-        f"------------------------\n"
         f"turn:      {turn}\n"
         f"castling:  {castling}\n"
         f"enpassant: {enpassant}\n"
-        f"------------------------\n"
     )
     for row in pieces.split("/"):
         for c in row:
-            if c.isalpha():
-                print_to_err_log(c)
-            else:
-                print_to_err_log(int(c) * ".")
+            print_to_err_log(c if c.isalpha else int(c) * ".")
         print_to_err_log("\n")
-    # print_to_err_log(f"------------------------\n")
+    print_to_err_log(
+        f"#####################################\n"
+    )
 
 
 def get_num_fens() -> int:
@@ -80,8 +79,8 @@ def get_num_fens() -> int:
 
 
 def fens(
-    lock: AcquirerProxy, fen_test_batch_size: int = DEFAULT_FEN_TEST_BATCH_SIZE
-) -> Generator[tuple[str, AcquirerProxy], None, None]:
+    lock: Lock, fen_test_batch_size: int = DEFAULT_FEN_TEST_BATCH_SIZE
+) -> Generator[tuple[str, Lock], None, None]:
     try:
         with open(FEN_DATA_PATH, "r") as f:
             consumed_fens = 0
@@ -138,21 +137,20 @@ def parse_engine_output(engine_output: str) -> set[str]:
     )
 
 
-def actual_generated_moves(fen: str) -> set[str] | None:
+def actual_generated_moves(fen: str) -> set[str]:
     return parse_engine_output(get_engine_output(fen))
 
 
 def expected_generated_moves(fen: str):
-    # ignore promotion index (just uci)
     try:
         board = chess.Board(fen)
         return {move.uci() for move in board.legal_moves if move.uci()[-1] not in "rnb"}
     except ValueError as e:
-        print_to_err_log(f"Warning: Invalid FEN, got error {e}")
+        print_to_err_log(f"\nWarning: Invalid FEN, got error {e}\n")
         return set()
 
 
-def compare_generated_moves(args: tuple[str, AcquirerProxy]) -> None:
+def compare_generated_moves(args: tuple[str, Lock]) -> None:
     fen, lock = args
 
     actual = actual_generated_moves(fen)
@@ -161,20 +159,17 @@ def compare_generated_moves(args: tuple[str, AcquirerProxy]) -> None:
     extraneous_moves = actual.difference(expected)
     missing_moves = expected.difference(actual)
 
-    # lock debugging output, so that printed expressions are not garbled
-    with lock:
-        if not missing_moves and not extraneous_moves:
-            print_to_out_log("PASSED!\n")
-        else:
-            print_to_out_log("FAILED!\n")
-            print_board(fen)
-            print_to_err_log("------------------------\n")
-            print_to_err_log(f"FEN: {fen}\n")
+    if missing_moves or extraneous_moves:
+        # lock debugging output, so that printed expressions are not garbled
+        with lock:
+            print_to_out_log(f"Failed for {fen}!\n")
+            print_board_to_err_log(fen)
+            print_to_err_log(f"Fen: {fen}")
             if extraneous_moves:
                 print_to_err_log(f"Extraneous moves: {extraneous_moves}\n")
             if missing_moves:
-                print_to_err_log(f"Missing moves: {missing_moves}\n\n")
-            # print_to_err_log("-------------------------------------------------------\n")
+                print_to_err_log(f"Missing moves: {missing_moves}\n")
+            print_to_err_log(f"#####################################\n")
 
 
 def validate_move_generation(fen_test_batch_size: int | None = None):
@@ -210,9 +205,9 @@ if __name__ == "__main__":
         print("Rebuilding engine...")
         build_engine()
 
-    print(f"Testing {DEFAULT_FEN_TEST_BATCH_SIZE} FEN positions...")
+    print(f"Testing up to {DEFAULT_FEN_TEST_BATCH_SIZE} FEN positions...")
 
     start = perf_counter()
     validate_move_generation()
     elapsed_time = perf_counter() - start
-    print(f"Took {elapsed_time:.2f}s!")
+    print(f"Finished bulk validation! Took {elapsed_time:.2f}s!")

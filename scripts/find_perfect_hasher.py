@@ -5,17 +5,11 @@ from pathlib import Path
 from tqdm import tqdm
 from time import perf_counter
 
-KEYS = [
-    "k",
-    "q",
-    "K",
-    "Q",
+KEYS = [ # modifiable
+    "k", "q", "K", "Q",
 ]
-VALS = [
-    57,
-    61,
-    1,
-    5,
+VALS = [ # modifiable
+    57, 61, 1, 5,
 ]
 MAP = dict(zip(KEYS, VALS))
 

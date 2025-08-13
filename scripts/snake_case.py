@@ -14,10 +14,9 @@ def pascal_or_camel_case_to_snake_case(filename: str) -> str:
 
 
 def filenames_to_snake_case(files: list[str]) -> None:
-    assert (all(file.isalpha() for file in files), "filenames must all be alphabetic!")
+    assert all(re.fullmatch(file, "[A-Za-z]+") for file in files), "filenames must all be alphabetic!"
     abs_file_paths = [os.path.abspath(file) for file in files]
     for abs_file_path in abs_file_paths:
-        # print(f"mv {abs_file_path} {os.path.join(os.path.dirname(abs_file_path), pascal_or_camel_case_to_snake_case(os.path.basename(abs_file_path)))}")
         os.rename(
             abs_file_path,
             os.path.join(
@@ -30,7 +29,6 @@ def filenames_to_snake_case(files: list[str]) -> None:
 def file_header_include_directives_to_snake_case(files: list[str]) -> None:
     def include_header_to_snake_case(match: re.Match[str]) -> str:
         snake_case_base = pascal_or_camel_case_to_snake_case(match.group("base"))
-        # print(f"{match.group(0)} >> #include \"{snake_case_base}.{match.group("extension")}\"")
         return rf'#include "{snake_case_base}.{match.group("extension")}"'
 
     for file in files:
