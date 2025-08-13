@@ -51,11 +51,17 @@ struct DeltasContainerTrait<MoveType::DoublePawnPush>
 template <MoveType mType>
 using DeltasContainerType = DeltasContainerTrait<mType>::type;
 
+template<MoveType mType>
+bool always_false = false;
+
 template <MoveType mType>
 struct PieceSquareDeltas
 {
     using MoveDeltasList = DeltasContainerType<mType>;
-    static MoveDeltasList generate(const Move<mType> move) noexcept { return {}; }
+    static MoveDeltasList generate(const Move<mType> move) noexcept
+    {
+        static_assert(always_false<mType>, "Invalid move type");
+    }
 };
 
 template <>
@@ -64,12 +70,11 @@ struct PieceSquareDeltas<MoveType::Normal>
     using MoveDeltasList = DeltasContainerType<MoveType::Normal>;
     static MoveDeltasList generate(const Move<MoveType::Normal> move) noexcept
     {
-        auto maybeCapturedKey = move.capturedKey();
         MoveDeltasList deltas = {
             Delta::Remove(move.movedKey(), move.start()),
             Delta::Place(move.movedKey(), move.end()),
         };
-        if (maybeCapturedKey)
+        if (auto maybeCapturedKey = move.capturedKey(); maybeCapturedKey)
             deltas.push_back(Delta::Remove(*maybeCapturedKey, move.end()));
         return deltas;
     }
@@ -95,12 +100,11 @@ struct PieceSquareDeltas<MoveType::Promotion>
     using MoveDeltasList = DeltasContainerType<MoveType::Promotion>;
     static MoveDeltasList generate(const Move<MoveType::Promotion> move) noexcept
     {
-        auto maybeCapturedKey = move.capturedKey();
         MoveDeltasList deltas = {
             Delta::Remove(move.movedKey(), move.start()),
             Delta::Place(move.promotionKey(), move.end()),
         };
-        if (maybeCapturedKey)
+        if (auto maybeCapturedKey = move.capturedKey(); maybeCapturedKey)
             deltas.push_back(Delta::Remove(*maybeCapturedKey, move.end()));
         return deltas;
     }
