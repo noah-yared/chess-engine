@@ -2,10 +2,11 @@
 
 #include "board_utils.h"
 #include "move.h"
+#include "move_factory.h"
 #include "position.h"
 
 // uses current state of instance position object pos
-[[nodiscard]] MoveVariant uciToMove(const std::string& uci, const Position& pos) noexcept
+[[nodiscard]] inline MoveVariant uciToMove(const std::string& uci, const Position& pos) noexcept
 {
     constexpr auto normal = MoveType::Normal;
     constexpr auto promotion = MoveType::Promotion;
@@ -18,13 +19,13 @@
     auto movedPiece = pos.getPieceOccupyingSquare(from),
          capturedPiece = pos.getPieceOccupyingSquare(to);
     if (uci.size() == 5)
-        return pos.createMove<promotion>(from, to);
+        return MoveFactory::createMove<promotion>(pos, from, to);
     if (auto maybeEnpassantSq = pos.maybeEnpassantSquare();
         maybeEnpassantSq && (to == *maybeEnpassantSq) && (movedPiece == PieceType::PAWN))
-        return pos.createMove<enpassant>(from, to);
+        return MoveFactory::createMove<enpassant>(pos, from, to);
     if (std::abs(from - to) == FILES * 2 && movedPiece == PieceType::PAWN)
-        return pos.createMove<doublePush>(from, to);
+        return MoveFactory::createMove<doublePush>(pos, from, to);
     if (std::abs(from - to) == 2 && movedPiece == PieceType::KING)
-        return pos.createMove<castle>(from, to);
-    return pos.createMove<normal>(from, to);
+        return MoveFactory::createMove<castle>(pos, from, to);
+    return MoveFactory::createMove<normal>(pos, from, to);
 }
