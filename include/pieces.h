@@ -20,6 +20,8 @@ enum class Color
 };
 
 // inline Color opposite(Color c) { return c == Color::WHITE ? Color::BLACK : Color::WHITE; }
+template<Color c>
+inline consteval Color opposite() { return c == Color::WHITE ? Color::BLACK : Color::WHITE; }
 inline Color opposite(Color c) noexcept { return Color(c != Color::WHITE); }
 inline PieceType& operator++(PieceType& t) noexcept
 {
