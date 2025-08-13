@@ -44,21 +44,6 @@ void BoardState::setCastlingPrivileges(const std::string& privs) noexcept
     state_ |= rights << CASTLING_PRIVS; // set
 }
 
-// Complex logic methods
-std::vector<int> BoardState::availableCastlingDestinations(Color color) const noexcept
-{
-    // white castling bits are the upper 2 bits of the castling bits
-    std::vector<int> dests;
-    dests.reserve(2);
-    int isWhite = color == Color::WHITE, isBlack = color == Color::BLACK;
-    char kingside = 'k' * isBlack + 'K' * isWhite, queenside = 'q' * isBlack + 'Q' * isWhite;
-    if (isCastlingRightAvailable(kingside))
-        dests.push_back(CASTLING_DESTINATION(kingside));
-    if (isCastlingRightAvailable(queenside))
-        dests.push_back(CASTLING_DESTINATION(queenside));
-    return dests;
-}
-
 // String parsing methods
 std::string BoardState::parseCastlingRights() const noexcept
 {

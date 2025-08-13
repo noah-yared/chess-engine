@@ -13,6 +13,7 @@
 #include "chess_traits.h"
 #include "pieces.h"
 #include "platform.h"
+#include "static_vector.h"
 
 class BoardState
 {
@@ -83,7 +84,32 @@ class BoardState
         return existsEnpassantSq() ? std::optional<int>(enpassantSq()) : std::nullopt;
     }
 
-    [[nodiscard]] std::vector<int> availableCastlingDestinations(Color color) const noexcept;
+    template<Color color>
+    [[nodiscard]] StaticVector<int, 2> availableCastlingDestinations() const noexcept
+    {
+        StaticVector<int, 2> dests;
+        if constexpr (color == Color::WHITE)
+        {
+            if (isCastlingRightAvailable('K'))
+                dests.push_back(CASTLING_DESTINATION('K'));
+            if (isCastlingRightAvailable('Q'))
+                dests.push_back(CASTLING_DESTINATION('Q'));
+        }
+        else
+        {
+            if (isCastlingRightAvailable('k'))
+                dests.push_back(CASTLING_DESTINATION('k'));
+            if (isCastlingRightAvailable('q'))
+                dests.push_back(CASTLING_DESTINATION('q'));
+        }
+        return dests;
+    }
+    [[nodiscard]] StaticVector<int, 2> availableCastlingDestinations(Color color) const noexcept
+    {
+        return color == Color::WHITE
+            ? availableCastlingDestinations<Color::WHITE>()
+            : availableCastlingDestinations<Color::BLACK>();
+    }
 
     // String parsing methods
     std::string parseCastlingRights() const noexcept;
