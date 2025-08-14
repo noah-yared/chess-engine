@@ -6,34 +6,56 @@
 template <MoveType mType>
 inline void updateEnpassantSquare(const Move<mType> move, BoardState& state) noexcept
 {
-    state.setEnpassantSquare(std::nullopt); // no new enpassant square
-}
-
-template <>
-inline void
-updateEnpassantSquare<MoveType::DoublePawnPush>(const Move<MoveType::DoublePawnPush> move,
-                                                BoardState& state) noexcept
-{
-    state.setEnpassantSquare(move.enpassantSquare());
+    if constexpr (mType == MoveType::DoublePawnPush)
+        state.setEnpassantSquare(move.enpassantSquare());
+    else
+        state.setEnpassantSquare(std::nullopt);
 }
 
 template <MoveType mType>
 inline void updateCastlingPrivs(const Move<mType> move, BoardState& state) noexcept
 {
-    if (move.moved() == PieceType::KING)
+    if constexpr (mType == MoveType::Castle)
+    {
         move.side() == Color::WHITE ? state.stripCastlingPrivileges<'K', 'Q'>()
                                     : state.stripCastlingPrivileges<'k', 'q'>();
-    else if (move.moved() == PieceType::ROOK)
-        move.side() == Color::WHITE ? state.stripCastlingPrivileges<'Q'>()
-                                    : state.stripCastlingPrivileges<'q'>();
-}
+    }
+    else
+    {
+        if (move.moved() == PieceType::KING)
+        {
+            move.side() == Color::WHITE
+                ? state.stripCastlingPrivileges<'K', 'Q'>()
+                : state.stripCastlingPrivileges<'k', 'q'>();
+        }
+        else if (move.moved() == PieceType::ROOK)
+        {
+            if (isSquareOnLeftEdge(move.start()))
+                move.side() == Color::WHITE
+                    ? state.stripCastlingPrivileges<'Q'>()
+                    : state.stripCastlingPrivileges<'q'>();
+            else if (isSquareOnRightEdge(move.start()))
+                move.side() == Color::WHITE
+                    ? state.stripCastlingPrivileges<'K'>()
+                    : state.stripCastlingPrivileges<'k'>();
+        }
 
-template <>
-inline void updateCastlingPrivs<MoveType::Castle>(const Move<MoveType::Castle> move,
-                                                  BoardState& state) noexcept
-{
-    move.side() == Color::WHITE ? state.stripCastlingPrivileges<'K', 'Q'>()
-                                : state.stripCastlingPrivileges<'k', 'q'>();
+        switch(move.end())
+        {
+            case Square::A1:
+                state.stripCastlingPrivileges<'Q'>();
+                break;
+            case Square::H1:
+                state.stripCastlingPrivileges<'K'>();
+                break;
+            case Square::A8:
+                state.stripCastlingPrivileges<'q'>();
+                break;
+            case Square::H8:
+                state.stripCastlingPrivileges<'k'>();
+                break;
+        }
+    }
 }
 
 template <MoveType mType>
