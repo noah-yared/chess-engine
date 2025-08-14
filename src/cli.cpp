@@ -134,13 +134,19 @@ SelfPlayArgs parseSelfPlayArgs(int argc, const char** argv)
 
 void simulateSelfPlay(const SelfPlayArgs& args, const char* exePath)
 {
+    // aggregate arguments
     int numMoves = args.numMoves.value_or(100), searchDepth = args.searchDepth.value_or(6);
     std::string fen = args.fen.value_or(std::string(STARTING_FEN)); // default fen if none provided
+
+    // create search engine
+    SearchEngine engine(fen);
+
     // create default output file name
     const auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::stringstream ss;
     ss << "engine_output_" << std::put_time(std::localtime(&time), "%Y-%m-%d_%H-%M-%S") << ".txt";
     std::string outputFile = args.outputFile.value_or(ss.str());
+
     // create output directory if it doesnt exist and create output file stream
     auto outputDirectory =
         std::filesystem::canonical(exePath).parent_path().parent_path() / "output";
@@ -150,33 +156,37 @@ void simulateSelfPlay(const SelfPlayArgs& args, const char* exePath)
     if (ec)
         std::cerr << "Error creating output directory: " << ec.message() << '\n'
                   << "Outputting to console instead.\n\n";
-    std::ofstream ofs((outputDirectory / outputFile).string());
     std::cout << "Simulating self-play with " << numMoves << " moves at depth " << searchDepth
               << ".\n";
     std::cout << "Dumping positions to "
               << (outputToFile ? (outputDirectory / outputFile).string() : std::string("console"))
               << ".\n\n";
+
+    // create output file stream
+    std::ofstream ofs((outputDirectory / outputFile).string());
     auto& os = outputToFile ? ofs : std::cout;
+
+    // recursive lambda for self-play, takes a lambda as a parameter to call on the next move
+    auto play = [&engine, &os, searchDepth, numMoves]<Color sideToMove>(auto&& self,
+                                                                        int moveNumber = 1) -> void
+    {
+        if (moveNumber > numMoves)
+            return;
+        auto move = engine.search<sideToMove>(searchDepth);
+        os << "Move #" << moveNumber << ": "
+           << std::visit([](auto&& arg) { return arg.uci(); }, move) << '\n';
+        engine.dumpPosition(os);
+        self.template operator()<opposite<sideToMove>()>(self, moveNumber + 1);
+    };
+
+    // start self-play
     auto start = std::chrono::high_resolution_clock::now();
-    SearchEngine engine(fen);
-    if (engine.turn() == Color::WHITE)
-    {
-        for (int i = 0; i < numMoves; ++i)
-        {
-            engine.search<Color::WHITE>(searchDepth);
-            engine.dumpPosition(os);
-        }
-    }
-    else
-    {
-        for (int i = 0; i < numMoves; ++i)
-        {
-            engine.search<Color::BLACK>(searchDepth);
-            engine.dumpPosition(os);
-        }
-    }
+    engine.turn() == Color::WHITE ? play.operator()<Color::WHITE>(play)
+                                  : play.operator()<Color::BLACK>(play);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+
+    // print results to console
     std::cout << "Simulation complete!\n\n"
               << "Time taken:       " << std::setw(12) << static_cast<double>(duration) / 1000.0
               << " secs\n"
