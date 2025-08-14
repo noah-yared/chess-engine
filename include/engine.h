@@ -8,6 +8,7 @@
 #include <variant>
 
 #include "board_state_snapshot.h"
+#include "move_generator.h"
 #include "move_list.h"
 #include "pieces.h"
 #include "position.h"
@@ -23,10 +24,11 @@ class SearchEngine
     StateStack<BoardStateSnapshot> undoStack_;
     TranspositionTable tt_;
     u64 nodesSearched_;
+    mutable MoveList moveBuffer_;
 
     // private constructor for testing
     explicit SearchEngine(const Position& position, size_t ttSize) noexcept
-        : position_{position}, undoStack_{}, tt_{ttSize}, nodesSearched_{0ULL} {};
+        : position_{position}, undoStack_{}, tt_{ttSize}, nodesSearched_{0ULL}, moveBuffer_{} {};
 
     struct Line
     {
@@ -70,8 +72,8 @@ class SearchEngine
                   getStep(bestMove));
     }
 
-    int getTTScoreOrSearch(int& alpha, int& beta, int depth, bool isMaximizingPlayer,
-                           Color color) noexcept
+    template <Color color>
+    int getTTScoreOrSearch(int& alpha, int& beta, int depth) noexcept
     {
         if (auto ttEval = ttEvalLookup(depth); ttEval.has_value())
         {
@@ -87,31 +89,49 @@ class SearchEngine
                 break;
             }
         }
-        return alphaBeta(alpha, beta, depth - 1, !isMaximizingPlayer, opposite(color)).score;
+        return alphaBeta<opposite<color>()>(alpha, beta, depth - 1).score;
     }
 
-    Line alphaBeta(int alpha, int beta, int depth, bool isMaximizingPlayer, Color color) noexcept
+    template <Color color>
+    Line alphaBeta(int alpha, int beta, int depth) noexcept
     {
         if (!depth) // end of search reached, return final eval
             return {.score = position_.evaluation()};
-        const auto possibleMoves = position_.legalMoves();
+
+        const auto possibleMoves = legalMoves<color>();
         nodesSearched_ += possibleMoves.size();
+
         if (possibleMoves.isEmpty()) // end of game reached, return final eval
             return {.score = position_.evaluation()};
+
         int originalAlpha = alpha, originalBeta = beta;
-        auto bestMove = *(possibleMoves.begin());
+        constexpr bool isMaximizingPlayer = color == Color::WHITE;
+        auto bestMove = possibleMoves[0];
+
         for (const auto move : possibleMoves)
         {
             advance(move);
-            int eval = getTTScoreOrSearch(alpha, beta, depth, isMaximizingPlayer, color);
+            int eval = getTTScoreOrSearch<color>(alpha, beta, depth);
             backtrack(move);
-            if (isMaximizingPlayer ? (eval > alpha) : (eval < beta))
-                bestMove = move, isMaximizingPlayer ? (alpha = eval) : (beta = eval);
+            if constexpr (isMaximizingPlayer)
+            {
+                if (eval > alpha)
+                    bestMove = move, alpha = eval;
+            }
+            else
+            {
+                if (eval < beta)
+                    bestMove = move, beta = eval;
+            }
             if (beta <= alpha)
                 break; // prune branch
         }
-        ttEvalStore(isMaximizingPlayer ? alpha : beta, depth, originalAlpha, originalBeta,
-                    bestMove);
+
+        if constexpr (isMaximizingPlayer)
+            ttEvalStore(alpha, depth, originalAlpha, originalBeta, bestMove);
+        else
+            ttEvalStore(beta, depth, originalAlpha, originalBeta, bestMove);
+
         return Line{.move = bestMove, .score = isMaximizingPlayer ? alpha : beta};
     }
 
@@ -130,6 +150,18 @@ class SearchEngine
     SearchEngine(const SearchEngine&) = delete;
     SearchEngine operator=(const SearchEngine&) = delete;
 
+    template <Color color>
+    const MoveList& legalMoves() const noexcept
+    {
+        moveBuffer_.clear();
+        MoveGenerator::pushLegalMoves<color>(position_, moveBuffer_);
+        return moveBuffer_;
+    }
+
+    const Position& position() const noexcept { return position_; }
+
+    Color turn() const noexcept { return position_.sideToMove(); }
+
     void advance(MoveVariant variant) noexcept
     {
         undoStack_.push(position_.getStateSnapshot());
@@ -145,20 +177,27 @@ class SearchEngine
             variant);
     }
 
+    template <Color color>
     MoveVariant search(int depth = SEARCH_DEPTH) noexcept
     {
         undoStack_.clear();
-        auto [maybeMove, score] =
-            alphaBeta(NEGINF, POSINF, depth, position_.isWhiteToMove(), position_.sideToMove());
+        moveBuffer_.clear();
+
+        auto [maybeMove, score] = alphaBeta<color>(NEGINF, POSINF, depth);
+
         assert(maybeMove && "game is over, no further moves can be played!");
-        assert(position_.legalMoves().contains(*maybeMove) && "move not found in legal moves");
+        assert(legalMoves<color>().contains(*maybeMove) && "move not found in legal moves");
+
         advance(*maybeMove);
         return *maybeMove;
     }
 
-    const Position& getPosition() const noexcept { return position_; }
+    MoveVariant search(int depth = SEARCH_DEPTH) noexcept
+    {
+        return turn() == Color::WHITE ? search<Color::WHITE>(depth) : search<Color::BLACK>(depth);
+    }
 
     void dumpPosition(std::ostream& os = std::cout) const noexcept { os << position_ << '\n'; }
 
-    u64 getNodesSearchedCount() const noexcept { return nodesSearched_; }
+    u64 nodesSearched() const noexcept { return nodesSearched_; }
 };

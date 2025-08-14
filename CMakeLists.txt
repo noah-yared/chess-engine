@@ -25,7 +25,6 @@ add_library(engine_lib STATIC
   src/board_state.cpp
   src/evaluate.cpp
   src/move_list.cpp
-  src/position.cpp
 )
 target_include_directories(engine_lib
   PUBLIC
@@ -34,6 +33,7 @@ target_include_directories(engine_lib
 
 # engine binary
 add_executable(engine
+  src/cli.cpp
   src/main.cpp
 )
 target_include_directories(engine

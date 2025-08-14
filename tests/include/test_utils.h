@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include "move_factory.h"
 #include "position.h"
 
 class ChessTestFixture : public ::testing::Test
@@ -20,26 +21,26 @@ class ChessTestFixture : public ::testing::Test
 
     [[nodiscard]] Normal normal(Square from, Square to) const
     {
-        return pos.createMove<MoveType::Normal>(from, to);
+        return MoveFactory::createMove<MoveType::Normal>(pos, from, to);
     }
 
     [[nodiscard]] Promotion promotion(Square from, Square to) const
     {
-        return pos.createMove<MoveType::Promotion>(from, to);
+        return MoveFactory::createMove<MoveType::Promotion>(pos, from, to);
     }
 
     [[nodiscard]] Enpassant enpassant(Square from, Square to) const
     {
-        return pos.createMove<MoveType::Enpassant>(from, to);
+        return MoveFactory::createMove<MoveType::Enpassant>(pos, from, to);
     }
 
     [[nodiscard]] DoublePush doublePush(Square from, Square to) const
     {
-        return pos.createMove<MoveType::DoublePawnPush>(from, to);
+        return MoveFactory::createMove<MoveType::DoublePawnPush>(pos, from, to);
     }
 
     [[nodiscard]] Castle castle(Square from, Square to) const
     {
-        return pos.createMove<MoveType::Castle>(from, to);
+        return MoveFactory::createMove<MoveType::Castle>(pos, from, to);
     }
 };

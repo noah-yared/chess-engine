@@ -9,6 +9,7 @@
 #include <unordered_set>
 
 #include "board_utils.h"
+#include "move_generator.h"
 #include "move_utils.h"
 #include "position.h"
 #include "test_utils.h"
@@ -21,7 +22,9 @@ class MoveGenerationTest : public ChessTestFixture
                      UciMoveTypes, std::string>...>) // make sure all types are strings
     void expectLegalMoves(const UciMoveTypes&... uciMoves)
     {
-        MoveList expectedMoves(uciToMove(uciMoves, pos)...), actualMoves = pos.legalMoves();
+        MoveList expectedMoves(uciToMove(uciMoves, pos)...), actualMoves {};
+        pos.isWhiteToMove() ? MoveGenerator::pushLegalMoves<Color::WHITE>(pos, actualMoves)
+                            : MoveGenerator::pushLegalMoves<Color::BLACK>(pos, actualMoves);
         EXPECT_EQ(actualMoves, expectedMoves) << diff(actualMoves, expectedMoves);
     }
 

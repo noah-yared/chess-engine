@@ -1,11 +1,13 @@
 #include <benchmark/benchmark.h>
 
+#include "move_generator.h"
 #include "position.h"
 
 static void BM_CopyPosition(benchmark::State& state)
 {
     Position pos;
-    MoveList ml = pos.legalMoves();
+    MoveList ml{};
+    MoveGenerator::pushLegalMoves<Color::WHITE>(pos, ml);
     long long N = state.range(0);
     for (auto _ : state)
     {
@@ -24,7 +26,8 @@ BENCHMARK(BM_CopyPosition)->Range(8, 256);
 static void BM_ModifyPositionInPlace(benchmark::State& state)
 {
     Position pos;
-    MoveList ml = pos.legalMoves();
+    MoveList ml{};
+    MoveGenerator::pushLegalMoves<Color::WHITE>(pos, ml);
     long long N = state.range(0);
     for (auto _ : state)
     {

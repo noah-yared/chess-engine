@@ -27,12 +27,12 @@ class MoveUndoTest : public ChessTestFixture
     template <typename mType, typename... rest>
     void testMoveSequenceImpl(SearchEngine& engine, const mType move, const rest... moves)
     {
-        auto startingPos = engine.getPosition();
+        auto startingPos = engine.position();
         engine.advance(move);
         if constexpr (sizeof...(moves) > 0)
             testMoveSequenceImpl(engine, moves...);
         engine.backtrack(move);
-        EXPECT_EQ(startingPos, engine.getPosition());
+        EXPECT_EQ(startingPos, engine.position());
     }
 };
 
