@@ -10,6 +10,27 @@ A performant chess engine built with modern C++17/20 features.
 - **Type-safe move system** with template specializations
 - **Alpha-beta search** with iterative deepening
 
+## Benchmarks
+
+**Test setup**
+
+| Component | Details |
+|-----------|---------|
+| **CPU**   | Apple M2 (8-core) |
+| **Memory**   | 7.3 GiB of RAM |
+| **OS**    | Fedora Asahi Linux |
+| **Mode**  | Single-threaded |
+
+**Results**
+
+| Benchmark | Result |
+|-----------|--------|
+| **Move generation** | **~35,000,000** legal moves/sec |
+| **Search** | **~24,000,000** visited nodes/sec |
+
+**Notes**
+- *Visited nodes/sec* counts only positions actually searched (including cutoffs), excluding nodes skipped entirely via TT hits or pruning.  
+
 ## Build & Run
 
 ### Prerequisites
