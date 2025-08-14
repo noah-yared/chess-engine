@@ -4,12 +4,26 @@ This directory contains utility and testing scripts used to support development 
 
 ---
 
+## Core Utilities
+
+### `chess_utils.py`
+A shared utility module providing common functionality for chess-related scripts:
+- **`game_tree_traverse()`**: Traverses a chess game tree to a specified depth, executing callbacks for each move
+- **`parse_chess_args()`**: Parses command-line arguments in flag-value format (e.g., `--depth 5 --out file.txt`)
+- **`FileManager`**: Context manager for file output operations
+- **`processed_moves()`**: Sorts and optionally filters moves (e.g., queen promotions only)
+
+---
+
 ## PGN / FEN Utilities
 
-### parse_pgn_db.py
+### `parse_pgn_db.py`
 Parses a large zstd-compressed pgn database and extracts the unique FENs of all the games.
 
 > Note: the pgn database is not included in this repo due to its size (200+ MB). Feel free to download it [here](https://lichess/database.lichess.org/standard/lichess_db_standard_rated_2015-01.pgn.zst). Place the downloaded file into the `scripts/data/` directory and keep the filename as is or update the script to use the new filename.
+
+### `fen_generator.py`
+Generates FEN positions by traversing a chess game tree to a specified depth. Useful for creating test datasets.
 
 ---
 
@@ -20,6 +34,12 @@ Compares engine-generated moves against `python-chess` over many FENs to validat
 
 ### `generate_legal_moves.py`
 Takes a FEN and prints all legal moves nicely formatted using the `python-chess` library, used for writing legal move generation tests for the engine.
+
+### `move_application_generator.py`
+Generates test data for validating the engine's move application functionality. Creates CSV-formatted data with before-FEN, move, and after-FEN.
+
+### `move_application_test.sh`
+Tests the engine's move application by comparing expected vs actual board states after moves. Automatically builds the engine if needed and provides error reporting.
 
 ---
 
