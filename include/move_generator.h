@@ -81,11 +81,9 @@ class MoveGenerator
         }
         else
         {
-            auto snapshot = pos.getStateSnapshot();
-            const_cast<Position&>(pos).applyMove(move);
-            bool isKingChecked = isKingInCheck<color>(pos);
-            const_cast<Position&>(pos).undoMove(move, snapshot);
-            return !isKingChecked;
+            auto tmp = pos;
+            tmp.applyMove(move);
+            return !isKingInCheck<color>(tmp);
         }
     }
 
