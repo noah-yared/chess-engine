@@ -37,7 +37,7 @@ struct MoveList
     // Observers
     [[nodiscard]] size_t size() const noexcept { return sz_; }
     [[nodiscard]] bool isEmpty() const noexcept { return sz_ == 0; }
-    [[nodiscard]] const MoveVariant& operator[](size_t i) noexcept { return moveBuffer_[i]; }
+    [[nodiscard]] const MoveVariant& operator[](size_t i) const noexcept { return moveBuffer_[i]; }
 
     // Complex search methods moved to source file
     [[nodiscard]] bool contains(const MoveVariant& move) const noexcept;
