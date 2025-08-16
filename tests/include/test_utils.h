@@ -3,10 +3,15 @@
 #include <gtest/gtest.h>
 
 #include "move_factory.h"
+#include "move_generator.h"
+#include "move_list.h"
 #include "position.h"
 
 class ChessTestFixture : public ::testing::Test
 {
+  private:
+    mutable MoveList moveBuffer_;
+
   protected:
     using Normal = Move<MoveType::Normal>;
     using DoublePush = Move<MoveType::DoublePawnPush>;
@@ -18,6 +23,15 @@ class ChessTestFixture : public ::testing::Test
 
     void loadStartingPosition() { pos = Position::fromStartingPosition(); }
     void loadFen(const std::string& fen) { pos = Position(fen); }
+
+    [[nodiscard]] MoveList legalMoves() const
+    {
+        moveBuffer_.clear();
+        pos.isWhiteToMove()
+            ? MoveGenerator::pushLegalMoves<Color::WHITE>(pos, moveBuffer_)
+            : MoveGenerator::pushLegalMoves<Color::BLACK>(pos, moveBuffer_);
+        return moveBuffer_;
+    }
 
     [[nodiscard]] Normal normal(Square from, Square to) const
     {

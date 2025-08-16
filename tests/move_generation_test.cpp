@@ -22,9 +22,7 @@ class MoveGenerationTest : public ChessTestFixture
                      UciMoveTypes, std::string>...>) // make sure all types are strings
     void expectLegalMoves(const UciMoveTypes&... uciMoves)
     {
-        MoveList expectedMoves(uciToMove(uciMoves, pos)...), actualMoves {};
-        pos.isWhiteToMove() ? MoveGenerator::pushLegalMoves<Color::WHITE>(pos, actualMoves)
-                            : MoveGenerator::pushLegalMoves<Color::BLACK>(pos, actualMoves);
+        MoveList expectedMoves(uciToMove(uciMoves, pos)...), actualMoves = legalMoves();
         EXPECT_EQ(actualMoves, expectedMoves) << diff(actualMoves, expectedMoves);
     }
 
