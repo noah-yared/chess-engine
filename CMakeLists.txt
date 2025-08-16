@@ -66,6 +66,7 @@ add_executable(engine_tests # declare test binary
   tests/move_apply_test.cpp
   tests/move_undo_test.cpp
   tests/move_generation_test.cpp
+  tests/perft_test.cpp
 )
 target_include_directories(engine_tests
   PUBLIC
