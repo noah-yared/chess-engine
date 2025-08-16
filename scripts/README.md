@@ -12,6 +12,57 @@ A shared utility module providing common functionality for chess-related scripts
 - **`parse_chess_args()`**: Parses command-line arguments in flag-value format (e.g., `--depth 5 --out file.txt`)
 - **`FileManager`**: Context manager for file output operations
 - **`processed_moves()`**: Sorts and optionally filters moves (e.g., queen promotions only)
+- **`chunk_board()`**: Splits board positions into chunks for parallel processing
+
+---
+
+## Perft Testing
+
+### `perft.py`
+Optimized perft (perft = performance test) script for validating chess move generation correctness:
+- **Parallel processing**: Uses multiprocessing to distribute work across CPU cores
+- **Intelligent chunking**: Breaks down large perft calculations into smaller parallel tasks
+- **Priority scheduling**: Can run with high CPU priority using `-p` flag
+
+**Usage:**
+```bash
+# Note: Boolean flags should be passed in strictly through command line arguments.
+
+# Single perft test
+python perft.py -d 5 -s "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+
+# Multiple tests from stdin with progress
+echo "-d,3,-s,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" | python perft.py -r
+
+# With high priority and file output (output/perft.out) and queen promotions only
+python perft.py -d 6 -p -w -q
+```
+
+**Flags:**
+- `-d <depth>`: Perft depth
+- `-s <fen>`: Starting FEN position
+- `-q` / `--queen-only`: Only consider queen promotions
+- `-c` / `--captures-only`: Only count capture moves
+- `-p` / `--priority`: Run with high CPU priority (requires sudo)
+- `-w` / `--write`: Write results to file instead of console
+- `-r` / `--report-progress`: Show progress bars
+
+### `scrape_perft_tests.sh`
+Bash script that extracts perft test cases from the C++ test file and runs them with `perft.py`:
+- **Automatic extraction**: Parses `tests/perft_test.cpp` to extract FEN positions and depths
+- **Batch processing**: Runs all extracted tests through perft.py
+- **Priority support**: Can run with sudo for high CPU priority
+
+**Usage:**
+```bash
+# Run scraped perft tests with high priority, write results to file (output/perft.out),
+# and ignore non-queen promotions
+./scrape_perft_tests.sh -w -q -p
+
+# Run scraped perft tests with standard priority, write results to console, and only count
+# capturing moves at depth 1
+./scrape_perft_tests.sh -c -r
+```
 
 ---
 
