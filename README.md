@@ -26,7 +26,7 @@ A performant chess engine built with modern C++17/20 features.
 | Benchmark | Result |
 |-----------|--------|
 | **Move generation** | **~35,000,000** legal moves/sec |
-| **Search** | **~24,000,000** visited nodes/sec |
+| **Search** | **~25,000,000** visited nodes/sec |
 
 **Notes**
 - *Visited nodes/sec* counts only positions actually searched (including cutoffs), excluding nodes skipped entirely via TT hits or pruning.  
