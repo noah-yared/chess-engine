@@ -39,8 +39,6 @@ add_executable(engine
 target_include_directories(engine
   PRIVATE
     ${CMAKE_BINARY_DIR}
-    ${CMAKE_SOURCE_DIR}/external/crow/include
-    ${CMAKE_SOURCE_DIR}/external/asio/asio/include
 )
 target_link_libraries(engine
   PRIVATE
