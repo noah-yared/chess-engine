@@ -47,6 +47,10 @@ target_link_libraries(engine
     engine_lib
 )
 
+# disable googl test/benchmark installation
+set(INSTALL_GTEST OFF CACHE BOOL "Disable GoogleTest installation" FORCE)
+set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "Disable GoogleBenchmark installation" FORCE)
+
 # googletest for testing
 include(FetchContent)
 FetchContent_Declare(
@@ -109,3 +113,15 @@ foreach(bench_name move_gen move_apply search static_eval)
       engine_lib
   )
 endforeach()
+
+# install engine binary
+install(TARGETS engine DESTINATION bin)
+
+# write the binary installation path to engine_config.json (for portability)
+set(ENGINE_BINARY_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/bin/engine)
+configure_file(
+  ${CMAKE_SOURCE_DIR}/../engine_config.json.in
+  ${CMAKE_SOURCE_DIR}/../engine_config.json
+  FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ # read only permissions
+  @ONLY
+)
