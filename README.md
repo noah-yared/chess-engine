@@ -48,8 +48,8 @@ mkdir build && cd build
 # Configure build for release mode
 cmake -DCMAKE_BUILD_TYPE=Release ..
 
-# Build the engine
-make
+# Build the engine (use '-j8' to run 8 jobs in parallel; adjust or modify it based on your machine's cpu count)
+make -j8
 ```
 
 ## Usage
