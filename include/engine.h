@@ -30,6 +30,8 @@ class SearchEngine
     explicit SearchEngine(const Position& position, size_t ttSize) noexcept
         : position_{position}, undoStack_{}, tt_{ttSize}, nodesSearched_{0ULL}, moveBuffer_{} {};
 
+    static constexpr std::pair<int, int> NullStep{0, 0};
+
     struct Line
     {
         std::optional<MoveVariant> move = std::nullopt;
@@ -43,10 +45,13 @@ class SearchEngine
         TTEvaluation(int score, Bound bound) noexcept : score(score), bound(bound) {};
     };
 
-    [[nodiscard]] static std::pair<int, int> getStep(MoveVariant moveVariant) noexcept
+    [[nodiscard]] static std::pair<int, int> getStep(std::optional<MoveVariant> maybeMove) noexcept
     {
+        if (!maybeMove)
+            return NullStep;
+
         return std::visit([](auto&& move) noexcept -> std::pair<int, int>
-                          { return {move.start(), move.end()}; }, moveVariant);
+                          { return {move.start(), move.end()}; }, *maybeMove);
     }
 
     [[nodiscard]] static Bound getBound(int score, int alpha, int beta) noexcept
@@ -66,7 +71,8 @@ class SearchEngine
         return std::nullopt;
     }
 
-    void ttEvalStore(int score, int depth, int alpha, int beta, MoveVariant bestMove) noexcept
+    void ttEvalStore(int score, int depth, int alpha, int beta,
+                     std::optional<MoveVariant> bestMove = std::nullopt) noexcept
     {
         tt_.store(position_.getHash(), score, depth, getBound(score, alpha, beta),
                   getStep(bestMove));
@@ -93,21 +99,45 @@ class SearchEngine
     }
 
     template <Color color>
+    [[nodiscard]] inline int terminalEval() noexcept
+    {
+        if (MoveGenerator::isKingInCheck<color>(position_)) // checkmate
+        {
+            int mateDepth = undoStack_.depth(); // penalize by number of moves to mate
+            if constexpr (color == Color::WHITE)
+                return -(MATE_SCORE - MATE_DEPTH_PENALTY * mateDepth); // black wins
+            else
+                return MATE_SCORE - MATE_DEPTH_PENALTY * mateDepth; // white wins
+        }
+        else // stalemate
+        {
+            return STALEMATE_SCORE;
+        }
+    }
+
+    template <Color color>
     Line alphaBeta(int alpha, int beta, int depth) noexcept
     {
-        if (!depth) // end of search reached, return final eval
-            return {.score = position_.evaluation()};
-
         const auto possibleMoves = legalMoves<color>();
         nodesSearched_ += possibleMoves.size();
 
-        if (possibleMoves.isEmpty()) // end of game reached, return final eval
-            return {.score = position_.evaluation()};
+        if (possibleMoves.isEmpty()) // end of game
+        {
+            int terminalScore = terminalEval<color>();
+            ttEvalStore(terminalScore, 0, alpha, beta);
+            return {.score = terminalScore};
+        }
+
+        if (!depth) // end of search
+        {
+            int finalEval = position_.evaluation();
+            ttEvalStore(finalEval, 0, alpha, beta);
+            return {.score = finalEval};
+        }
 
         int originalAlpha = alpha, originalBeta = beta;
         constexpr bool isMaximizingPlayer = color == Color::WHITE;
-        auto bestMove = possibleMoves[0];
-
+        auto bestMove = possibleMoves[0]; // safe as empty case is handled above
         for (const auto move : possibleMoves)
         {
             advance(move);

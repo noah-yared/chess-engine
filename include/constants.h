@@ -14,6 +14,10 @@ constexpr int POSINF = std::numeric_limits<int>::max();
 constexpr int MIN_EVAL = std::numeric_limits<i16>::min();
 constexpr int MAX_EVAL = std::numeric_limits<i16>::max();
 
+constexpr int MATE_SCORE = MAX_EVAL;
+constexpr int STALEMATE_SCORE = 0;
+constexpr int MATE_DEPTH_PENALTY = 1000;
+
 constexpr int MAX_POSSIBLE_LEGAL_MOVES = 218;
 
 constexpr int SEARCH_DEPTH = 3;

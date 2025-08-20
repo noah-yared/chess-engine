@@ -18,6 +18,7 @@ class StateStack
     // observers
     [[nodiscard]] inline bool isEmpty() const noexcept { return ply_ == 0; }
     [[nodiscard]] inline StateType top() const noexcept { return stack_.at(ply_ - 1); }
+    [[nodiscard]] inline size_t depth() const noexcept { return ply_; }
 
     // mutators
     inline void clear() noexcept { ply_ = 0; }
