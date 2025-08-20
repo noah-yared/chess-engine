@@ -112,14 +112,16 @@ foreach(bench_name move_gen move_apply search static_eval)
   )
 endforeach()
 
-# install engine binary
-install(TARGETS engine DESTINATION bin)
+if (INSTALL_ENGINE)
+  # install engine binary
+  install(TARGETS engine DESTINATION bin)
 
-# write the binary installation path to engine_config.json (for portability)
-set(ENGINE_BINARY_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/bin/engine)
-configure_file(
-  ${CMAKE_SOURCE_DIR}/../engine_config.json.in
-  ${CMAKE_SOURCE_DIR}/../engine_config.json
-  FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ # read only permissions
-  @ONLY
-)
+  # write the binary installation path to engine_config.json (for portability)
+  set(ENGINE_BINARY_INSTALL_PATH ${CMAKE_INSTALL_PREFIX}/bin/engine)
+  configure_file(
+    ${CMAKE_SOURCE_DIR}/engine_config.json.in
+    ${CMAKE_SOURCE_DIR}/engine_config.json
+    FILE_PERMISSIONS OWNER_READ GROUP_READ WORLD_READ # read only permissions
+    @ONLY
+  )
+endif()

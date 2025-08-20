@@ -13,3 +13,4 @@ venv/
 tests/hello_test.cpp
 Testing/
 output/
+*.json
