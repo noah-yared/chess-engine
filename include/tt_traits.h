@@ -166,14 +166,33 @@ struct FieldData
 // Helper functions
 template <std::integral T, int N, size_t... Is>
     requires std::is_unsigned_v<T>
-static constexpr std::array<T, N + 1> generateMasks(std::index_sequence<Is...>) noexcept
+static constexpr std::array<T, N> generateLowerMasks(std::index_sequence<Is...>) noexcept
 {
     T fullMask = std::numeric_limits<T>::max();
-    return {static_cast<T>(((Is == 0) ? fullMask : (fullMask >> (N - Is))))...};
+    return {static_cast<T>(fullMask >> (N - Is - 1))...};
 }
 
-template <std::integral T, int N = (sizeof(T) * 8)>
-static constexpr std::array<T, N + 1> masks() noexcept
+
+template <std::integral T, int N = (sizeof(T) * 8), int M = N>
+static constexpr std::array<std::array<T, N>, N> subMasks() noexcept
 {
-    return generateMasks<T, N>(std::make_index_sequence<N + 1>{});
+    std::array<std::array<T, N>, N> subMasks{};
+    T mask = std::numeric_limits<T>::max();
+    for (int i = 0; i < N; ++i)
+    {
+        for (int j = i; j < std::min(i + M, N); ++j)
+        {
+            subMasks[i][j] = (i == j)
+                ? static_cast<T>(1) << i
+                : (mask << i) & (mask >> (N - j - 1));
+        }
+    }
+    return subMasks;
+}
+
+
+template <std::integral T, int N = (sizeof(T) * 8)>
+static constexpr std::array<T, N> lowMasks() noexcept
+{
+    return generateLowerMasks<T, N>(std::make_index_sequence<N>{});
 }

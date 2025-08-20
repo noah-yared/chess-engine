@@ -16,8 +16,8 @@
 
 // Bitfield utilities
 constexpr int BYTE_SIZE = 8;
-constexpr auto U64_MASKS = masks<u64>();
-constexpr auto U8_MASKS = masks<u8>();
+constexpr auto U64_MASKS = lowMasks<u64>();
+constexpr auto U64_SUBMASKS = subMasks<u64, sizeof(u64) * BYTE_SIZE, BYTE_SIZE>();
 
 template <Field field>
 constexpr std::pair<int, int> divmod() noexcept
@@ -36,14 +36,15 @@ struct PackedTTEntry
         int bitWidth = detail::FieldTraits<field>::width;
         int bitsToPack = std::min(bitWidth, BYTE_SIZE - bitOffset);
 
-        pack[byteOffset] |= ~U8_MASKS[bitsToPack]; // clear bits to write into
-        pack[byteOffset] |= (static_cast<u8>(value) << bitOffset);
+        pack[byteOffset] &= ~U64_SUBMASKS[bitOffset][bitOffset + bitsToPack - 1]; // clear bits to write into
+        pack[byteOffset] |= (static_cast<u8>(value & U64_SUBMASKS[0][bitsToPack - 1]) << bitOffset);
 
+        ++byteOffset; // move to next byte
         for (int packedBits = bitsToPack; packedBits < bitWidth; ++byteOffset)
-        {
+        { // writing to the front of next byte
             bitsToPack = std::min(bitWidth - packedBits, BYTE_SIZE);
-            pack[byteOffset] &= ~U8_MASKS[bitsToPack]; // clear bits to write into
-            pack[byteOffset] |= (static_cast<u8>(value >> packedBits));
+            pack[byteOffset] &= ~U64_SUBMASKS[0][bitsToPack - 1]; // clear bits to write into
+            pack[byteOffset] |= ((value & U64_SUBMASKS[packedBits][packedBits + bitsToPack - 1]) >> packedBits);
             packedBits += bitsToPack;
         }
     }
@@ -54,12 +55,16 @@ struct PackedTTEntry
         auto [byteOffset, bitOffset] = divmod<field>();
         int bitWidth = detail::FieldTraits<field>::width;
 
-        T unpacked = static_cast<T>(pack[byteOffset]) >> bitOffset;
+        int bitsToUnpack = std::min(bitWidth, BYTE_SIZE - bitOffset);
 
-        for (int unpackedBits = BYTE_SIZE - bitOffset; unpackedBits < bitWidth; ++byteOffset)
+        T unpacked = 0;
+        unpacked |= (pack[byteOffset] & U64_SUBMASKS[bitOffset][bitOffset + bitsToUnpack - 1]) >> bitOffset;
+
+        ++byteOffset;
+        for (int unpackedBits = bitsToUnpack; unpackedBits < bitWidth; ++byteOffset)
         {
-            int bitsToUnpack = std::min(bitWidth - unpackedBits, BYTE_SIZE);
-            unpacked |= (static_cast<T>(pack[byteOffset] & U8_MASKS[bitsToUnpack]) << unpackedBits);
+            bitsToUnpack = std::min(bitWidth - unpackedBits, BYTE_SIZE);
+            unpacked |= ((pack[byteOffset] & U64_SUBMASKS[0][bitsToUnpack - 1]) << unpackedBits);
             unpackedBits += bitsToUnpack;
         }
 
@@ -106,7 +111,7 @@ struct PackedTTEntry
         u32 encodedMove = ((bestMove.first & 0x3f) << 6) | (bestMove.second & 0x3f);
         u32 boundValue = static_cast<int>(bound);
         u32 depthValue = depth;
-        u32 scoreValue = score;
+        i16 scoreValue = score;
         u64 truncatedKey = key & U64_MASKS[detail::FieldTraits<Field::KEY>::width];
 
         auto options = std::make_tuple(vacantFlag, encodedMove, boundValue, depthValue, scoreValue,
@@ -122,11 +127,16 @@ struct PackedTTEntry
                (otherKey & U64_MASKS[detail::FieldTraits<Field::KEY>::width]);
     }
     [[nodiscard]] inline Bound getBound() const noexcept { return Bound(getField<Field::BOUND>()); }
-    [[nodiscard]] inline int getEval() const noexcept { return getField<Field::SCORE>(); }
+    [[nodiscard]] inline int getEval() const noexcept { return getField<Field::SCORE, i16>(); }
     [[nodiscard]] inline bool hasAtLeastDepth(int depth) const noexcept
     {
         return getField<Field::DEPTH>() >= depth;
     }
+    [[nodiscard]] inline std::pair<int, int> getMove() const noexcept {
+        int field = getField<Field::BESTMOVE>();
+        return { field >> 6, field & 0x3f };
+    }
+    [[nodiscard]] inline int getDepth() const noexcept { return getField<Field::DEPTH>(); }
 
     // mutators
     inline void setEval(int score) noexcept { setField<Field::SCORE>(score); }
