@@ -14,7 +14,31 @@ bool MoveList::contains(const std::string& uci) const noexcept
 {
     return std::any_of(
         begin(), end(), [uci](auto&& move) noexcept
-        { return std::visit([uci](auto&& arg) noexcept { return arg.uci() == uci; }, move); });
+        {
+            return std::visit(
+                [uci](auto&& arg) noexcept
+                {
+                    return arg.uci() == uci;
+                }, move);
+        });
+}
+
+std::optional<MoveVariant> MoveList::findMove(const std::pair<int, int> step) const noexcept
+{
+    auto it = std::find_if(
+        begin(), end(), [step](auto&& move) noexcept
+        {
+            return std::visit(
+                [step](auto&& arg) noexcept
+                {
+                    return arg.start() == step.first && arg.end() == step.second;
+                }, move);
+        });
+    if (it == end())
+    {
+        return std::nullopt;
+    }
+    return *it;
 }
 
 // Comparison operators

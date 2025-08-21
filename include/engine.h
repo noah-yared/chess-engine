@@ -10,6 +10,7 @@
 #include "board_state_snapshot.h"
 #include "move_generator.h"
 #include "move_list.h"
+#include "move_order.h"
 #include "pieces.h"
 #include "position.h"
 #include "search.h"
@@ -98,6 +99,23 @@ class SearchEngine
         return alphaBeta<opposite<color>()>(alpha, beta, depth - 1).score;
     }
 
+    std::optional<MoveVariant> ttMoveLookup(int depth, const MoveList& moveList) noexcept
+    {
+        if (auto maybeEntry = tt_.probe(position_.getHash()); maybeEntry)
+        {
+            auto& ttEntry = *(*maybeEntry);
+            if (ttEntry.hasAtLeastDepth(depth))
+            {
+                auto bestStep = ttEntry.getMove();
+                if (bestStep != NullStep)
+                {
+                    return moveList.findMove(bestStep);
+                }
+            }
+        }
+        return std::nullopt;
+    }
+
     template <Color color>
     [[nodiscard]] inline int terminalEval() noexcept
     {
@@ -118,7 +136,7 @@ class SearchEngine
     template <Color color>
     Line alphaBeta(int alpha, int beta, int depth) noexcept
     {
-        const auto possibleMoves = legalMoves<color>();
+        auto possibleMoves = legalMoves<color>();
         nodesSearched_ += possibleMoves.size();
 
         if (possibleMoves.isEmpty()) // end of game
@@ -134,6 +152,9 @@ class SearchEngine
             ttEvalStore(finalEval, 0, alpha, beta);
             return {.score = finalEval};
         }
+
+        // move ordering with mvvlva
+        MoveOrdering::sort(possibleMoves, ttMoveLookup(depth, possibleMoves));
 
         int originalAlpha = alpha, originalBeta = beta;
         constexpr bool isMaximizingPlayer = color == Color::WHITE;

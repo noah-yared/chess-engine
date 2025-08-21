@@ -7,12 +7,8 @@
 
 #include "constants.h"
 #include "move.h"
+#include "move_variant.h"
 #include "platform.h"
-
-// make MoveVariant public so that it can be used in search
-using MoveVariant =
-    std::variant<Move<MoveType::Normal>, Move<MoveType::Enpassant>, Move<MoveType::Promotion>,
-                 Move<MoveType::Castle>, Move<MoveType::DoublePawnPush>>;
 
 struct MoveList
 {
@@ -39,7 +35,8 @@ struct MoveList
     [[nodiscard]] bool isEmpty() const noexcept { return sz_ == 0; }
     [[nodiscard]] const MoveVariant& operator[](size_t i) const noexcept { return moveBuffer_[i]; }
 
-    // Complex search methods moved to source file
+    // search methods
+    [[nodiscard]] std::optional<MoveVariant> findMove(const std::pair<int, int> step) const noexcept;
     [[nodiscard]] bool contains(const MoveVariant& move) const noexcept;
     [[nodiscard]] bool contains(const std::string& uci) const noexcept;
 
