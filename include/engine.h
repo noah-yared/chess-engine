@@ -5,6 +5,7 @@
 #include <regex>
 #include <string>
 #include <type_traits>
+#include <unordered_map>
 #include <variant>
 
 #include "board_state_snapshot.h"
@@ -25,11 +26,12 @@ class SearchEngine
     StateStack<BoardStateSnapshot> undoStack_;
     TranspositionTable tt_;
     u64 nodesSearched_;
+    std::unordered_map<u64, int> whiteHistory_, blackHistory_;
     mutable MoveList moveBuffer_;
 
     // private constructor for testing
     explicit SearchEngine(const Position& position, size_t ttSize) noexcept
-        : position_{position}, undoStack_{}, tt_{ttSize}, nodesSearched_{0ULL}, moveBuffer_{} {};
+        : position_{position}, undoStack_{}, tt_{ttSize}, nodesSearched_{0ULL}, whiteHistory_{}, blackHistory_{}, moveBuffer_{} {};
 
     static constexpr std::pair<int, int> NullStep{0, 0};
 
@@ -45,6 +47,24 @@ class SearchEngine
         Bound bound = Bound::EXACT;
         TTEvaluation(int score, Bound bound) noexcept : score(score), bound(bound) {};
     };
+
+    template<Color color>
+    void updateHistory(const Position& node) noexcept
+    {
+        if constexpr (color == Color::WHITE)
+            ++whiteHistory_[position_.getHash()];
+        else
+            ++blackHistory_[position_.getHash()];
+    }
+
+    template<Color color>
+    bool hasPositionOccurredThrice(const Position& node) noexcept
+    {
+        if constexpr (color == Color::WHITE)
+            return whiteHistory_[position_.getHash()] >= 3;
+        else
+            return blackHistory_[position_.getHash()] >= 3;
+    }
 
     [[nodiscard]] static std::pair<int, int> getStep(std::optional<MoveVariant> maybeMove) noexcept
     {
@@ -80,7 +100,7 @@ class SearchEngine
     }
 
     template <Color color>
-    int getTTScoreOrSearch(int& alpha, int& beta, int depth) noexcept
+    int getTTScoreOrSearch(int& alpha, int& beta, int depth, int originalDepth) noexcept
     {
         if (auto ttEval = ttEvalLookup(depth); ttEval.has_value())
         {
@@ -96,7 +116,7 @@ class SearchEngine
                 break;
             }
         }
-        return alphaBeta<opposite<color>()>(alpha, beta, depth - 1).score;
+        return alphaBeta<opposite<color>()>(alpha, beta, depth - 1, originalDepth).score;
     }
 
     std::optional<MoveVariant> ttMoveLookup(int depth, const MoveList& moveList) noexcept
@@ -172,7 +192,7 @@ class SearchEngine
     }
 
     template <Color color>
-    Line alphaBeta(int alpha, int beta, int depth) noexcept
+    Line alphaBeta(int alpha, int beta, int depth, int originalDepth = DEFAULT_SEARCH_DEPTH) noexcept
     {
         auto possibleMoves = legalMoves<color>();
         nodesSearched_ += possibleMoves.size();
@@ -200,7 +220,12 @@ class SearchEngine
         for (const auto move : possibleMoves)
         {
             advance(move);
-            int eval = getTTScoreOrSearch<color>(alpha, beta, depth);
+            if (depth == originalDepth && hasPositionOccurredThrice<opposite<color>()>(position_))
+            { // threefold repetition so discard move
+                backtrack(move);
+                continue;
+            }
+            int eval = getTTScoreOrSearch<color>(alpha, beta, depth, originalDepth);
             backtrack(move);
             if constexpr (isMaximizingPlayer)
             {
@@ -225,9 +250,9 @@ class SearchEngine
     }
 
   public:
-    SearchEngine() noexcept : position_{}, undoStack_{}, tt_{}, nodesSearched_{0ULL} {};
+    SearchEngine() noexcept : position_{}, undoStack_{}, tt_{}, nodesSearched_{0ULL}, whiteHistory_{}, blackHistory_{} {};
     explicit SearchEngine(const std::string& fen) noexcept
-        : position_{fen}, undoStack_{}, tt_{}, nodesSearched_{0ULL} {};
+        : position_{fen}, undoStack_{}, tt_{}, nodesSearched_{0ULL}, whiteHistory_{}, blackHistory_{} {};
 
     // Factory method for testing - creates engine without transposition table allocation
     [[nodiscard]] static SearchEngine withEmptyTTForTesting(const Position& position) noexcept
@@ -286,6 +311,7 @@ class SearchEngine
         assert(legalMoves<color>().contains(*maybeMove) && "move not found in legal moves");
 
         advance(*maybeMove);
+        updateHistory<opposite<color>()>(position_);
         return *maybeMove;
     }
 
