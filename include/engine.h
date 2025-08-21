@@ -229,7 +229,7 @@ class SearchEngine
     }
 
     template <Color color>
-    MoveVariant search(int depth = SEARCH_DEPTH) noexcept
+    MoveVariant search(int depth = DEFAULT_SEARCH_DEPTH) noexcept
     {
         undoStack_.clear();
         moveBuffer_.clear();
@@ -243,7 +243,7 @@ class SearchEngine
         return *maybeMove;
     }
 
-    MoveVariant search(int depth = SEARCH_DEPTH) noexcept
+    MoveVariant search(int depth = DEFAULT_SEARCH_DEPTH) noexcept
     {
         return turn() == Color::WHITE ? search<Color::WHITE>(depth) : search<Color::BLACK>(depth);
     }

@@ -20,8 +20,7 @@ constexpr int MATE_DEPTH_PENALTY = 1000;
 
 constexpr int MAX_POSSIBLE_LEGAL_MOVES = 218;
 
-constexpr int SEARCH_DEPTH = 3;
-// constexpr size_t MAX_DEPTH_ = 16;
+constexpr int DEFAULT_SEARCH_DEPTH = 5;
 
 constexpr int NUM_DIRECTIONS = 8;
 
