@@ -26,6 +26,7 @@ class MoveGenerator
         pushLegalMoves<MoveType::DoublePawnPush, PieceType::PAWN, color>(pos, moves);
         pushLegalMoves<MoveType::Castle, PieceType::KING, color>(pos, moves);
     }
+
     template <MoveType mType, PieceType pType, Color color>
     static void pushLegalMoves(const Position& pos, MoveList& moves) noexcept
     {
@@ -57,6 +58,49 @@ class MoveGenerator
             pushLegalCastleMoves<color>(pos, moves);
         else
             static_assert(false, "Invalid move type and piece type combination");
+    }
+
+    template<Color color>
+    static void pushNoisyMoves(const Position& pos, MoveList& moves) noexcept
+    {
+        pushNoisyMoves<PieceType::PAWN, color>(pos, moves);
+        pushNoisyMoves<PieceType::KNIGHT, color>(pos, moves);
+        pushNoisyMoves<PieceType::ROOK, color>(pos, moves);
+        pushNoisyMoves<PieceType::BISHOP, color>(pos, moves);        
+        pushNoisyMoves<PieceType::QUEEN, color>(pos, moves);
+        pushNoisyMoves<PieceType::KING, color>(pos, moves);
+    }
+
+    template<PieceType pType, Color color>
+    static void pushNoisyMoves(const Position& pos, MoveList& moves) noexcept
+    {
+        if constexpr (pType == PieceType::PAWN)
+        {
+            pushLegalPromotionMoves<color>(pos, moves);
+            pushLegalEnpassantMoves<color>(pos, moves);
+            BitUtils::bitsForEach<>(
+                pos.filterEnemySquares(
+                    BitUtils::clearRank<promotionRank<color>>(squaresAttackedByPawns<color>(pos)),
+                    color),
+                [&](int dest) noexcept
+                { pushPawnAttackMoves<color, MoveType::Normal>(pos, dest, moves); });
+        }
+        else
+        {
+            BitUtils::bitsForEach<>(
+                pos.getPieceBitboard(pType, color),
+                [&](int start) noexcept
+                {
+                    BitUtils::bitsForEach<>(
+                        pos.filterEnemySquares(attackedSquares<pType>(pos, start), color),
+                        [&](int dest) noexcept
+                        {
+                            pushIfLegal<MoveType::Normal, color>(
+                                pos, MoveFactory::createMove<MoveType::Normal, pType, color>(pos, start, dest),
+                                moves);
+                        });
+                });
+        }
     }
 
     /////////////////////////

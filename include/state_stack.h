@@ -6,7 +6,7 @@
 #include "constants.h"
 #include "platform.h"
 
-template <typename StateType, size_t MaxDepth = 16>
+template <typename StateType, size_t MaxDepth = 50 /* Safe limit to account for potential explosion in quiescence search */>
 class StateStack
 {
     std::array<StateType, MaxDepth> stack_;

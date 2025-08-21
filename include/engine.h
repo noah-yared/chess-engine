@@ -134,6 +134,44 @@ class SearchEngine
     }
 
     template <Color color>
+    int quiescenceSearch(int alpha, int beta) noexcept
+    {
+        int bestEval = position_.evaluation();
+        if constexpr (color == Color::WHITE)
+        {
+            if (bestEval >= beta) return bestEval;
+            alpha = std::max(alpha, bestEval);
+        }
+        else
+        {
+            if (bestEval <= alpha) return bestEval;
+            beta = std::min(beta, bestEval);
+        }
+
+        auto possibleMoves = noisyMoves<color>();
+        MoveOrdering::sort(possibleMoves);
+        for (const auto move : possibleMoves)
+        {
+            advance(move);
+            int eval = quiescenceSearch<opposite<color>()>(alpha, beta);
+            backtrack(move);
+            if constexpr (color == Color::WHITE)
+            {
+                if (eval >= beta) return eval;
+                alpha = std::max(alpha, eval);
+                bestEval = std::max(bestEval, eval);
+            }
+            else
+            {
+                if (eval <= alpha) return eval;
+                beta = std::min(eval, beta);
+                bestEval = std::min(bestEval, eval);
+            }
+        }
+        return bestEval;
+    }
+
+    template <Color color>
     Line alphaBeta(int alpha, int beta, int depth) noexcept
     {
         auto possibleMoves = legalMoves<color>();
@@ -148,7 +186,7 @@ class SearchEngine
 
         if (!depth) // end of search
         {
-            int finalEval = position_.evaluation();
+            int finalEval = quiescenceSearch<color>(alpha, beta);
             ttEvalStore(finalEval, 0, alpha, beta);
             return {.score = finalEval};
         }
@@ -206,6 +244,14 @@ class SearchEngine
     {
         moveBuffer_.clear();
         MoveGenerator::pushLegalMoves<color>(position_, moveBuffer_);
+        return moveBuffer_;
+    }
+
+    template <Color color>
+    const MoveList& noisyMoves() const noexcept
+    {
+        moveBuffer_.clear();
+        MoveGenerator::pushNoisyMoves<color>(position_, moveBuffer_);
         return moveBuffer_;
     }
 
