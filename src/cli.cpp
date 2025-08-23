@@ -1,6 +1,7 @@
 #include "cli.h"
 #include "constants.h"
 #include "engine_config.h"
+#include "move_generator.h"
 #include <array>
 #include <chrono>
 #include <filesystem>
@@ -44,6 +45,7 @@ void printUsage(const char* pathToExe)
         << "   " << pathToExe << " --legal-moves [<fen>]\n"
         << "   " << pathToExe << " --find-best [<fen> [--depth|-d <depth>]]\n"
         << "   " << pathToExe << " --make-move [[--fen|-f] <fen>] [[--move|-m] <uci>]\n\n"
+        << "   " << pathToExe << " --king-in-check <fen>\n\n"
         << "Flags:\n"
         << "   --help|-h: print this help message\n"
         << "   --perft: conduct a perft test by generating all possible moves up to a specified "
@@ -55,7 +57,8 @@ void printUsage(const char* pathToExe)
         << "   --find-best: find the best move for a given fen and output in uci format with "
            "optionally specified search depth\n"
         << "   --make-move: make move in uci format for a given fen and print the new fen, reads "
-           "from stdin if no flags are provided\n\n";
+           "from stdin if no flags are provided\n"
+        << "   --king-in-check: print whether the king (current side to move) is in check for a given fen\n\n";
 }
 
 PerftArgs parsePerftArgs(int argc, const char** argv)
@@ -239,6 +242,14 @@ void printNewFen(const MakeMoveArgs& args)
     std::cout << engine.position().toFen() << '\n';
 }
 
+void printIsKingInCheck(const std::string& fen)
+{
+    Position pos(fen);
+    std::cout << std::boolalpha << (pos.isWhiteToMove()
+        ? MoveGenerator::isKingInCheck<Color::WHITE>(pos)
+        : MoveGenerator::isKingInCheck<Color::BLACK>(pos)) << '\n';
+}
+
 int handlePerftCommand(int argc, const char* argv[])
 {
     if (argc != 4 && argc != 6)
@@ -369,6 +380,15 @@ int handleMakeMoveCommand(int argc, const char* argv[])
     return -1;
 }
 
+int handleKingInCheckCommand(int argc, const char* argv[])
+{
+    if (argc != 3)
+        return -1;
+
+    printIsKingInCheck(argv[2]);
+    return 0;
+}
+
 int runCli(int argc, const char* argv[])
 {
     // Handle no arguments case
@@ -395,6 +415,8 @@ int runCli(int argc, const char* argv[])
         return handleFindBestCommand(argc, argv);
     else if (command == "--make-move")
         return handleMakeMoveCommand(argc, argv);
+    else if (command == "--king-in-check")
+        return handleKingInCheckCommand(argc, argv);
 
     // Unknown command
     std::cout << "Invalid arguments passed in!\n\n";
