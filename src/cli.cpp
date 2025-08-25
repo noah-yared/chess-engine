@@ -22,6 +22,16 @@ std::string trimWhitespace(const std::string& str)
     return {start, end};
 }
 
+std::vector<std::string> split(const std::string& str, char delimiter = ' ')
+{
+    std::vector<std::string> tokens;
+    std::istringstream iss(str);
+    std::string token;
+    while (std::getline(iss, token, delimiter))
+        tokens.push_back(token);
+    return tokens;
+}
+
 namespace cli
 {
 
@@ -389,6 +399,52 @@ int handleKingInCheckCommand(int argc, const char* argv[])
     return 0;
 }
 
+int handleAppModeCommand(int argc, const char* argv[])
+{
+    if (argc != 2)
+        return -1;
+
+    SearchEngine engine;
+
+    std::string line;
+    while (std::getline(std::cin, line))
+    {
+        auto tokens = split(line);
+        auto command = tokens[0];
+        if (command == "make-move")
+        { // make-move <move>
+            engine.advance(uciToMove(tokens[1], engine.position()));
+            std::cout << engine.position().toFen() << '\n';
+        }
+        else if (command == "legal-moves")
+        { // legal-moves
+            if (engine.turn() == Color::WHITE)
+                std::cout << engine.legalMoves<Color::WHITE>();
+            else
+                std::cout << engine.legalMoves<Color::BLACK>();
+        }
+        else if (command == "find-best")
+        { // find-best <depth> <easy-mode>
+            std::cout << std::visit(
+                [](auto&& arg) { return arg.uci(); },
+                engine.search(std::stoi(tokens[1]), tokens[2] == "true")
+            ) << '\n';
+        }
+        else if (command == "king-in-check")
+        { // king-in-check
+            std::cout << std::boolalpha << (engine.turn() == Color::WHITE
+                ? MoveGenerator::isKingInCheck<Color::WHITE>(engine.position())
+                : MoveGenerator::isKingInCheck<Color::BLACK>(engine.position())) << '\n';
+        }
+        else
+        {
+            std::cout << "Invalid command: " << command << '\n';
+            return -1;
+        }
+    }
+    return 0;
+}
+
 int runCli(int argc, const char* argv[])
 {
     // Handle no arguments case
@@ -417,6 +473,8 @@ int runCli(int argc, const char* argv[])
         return handleMakeMoveCommand(argc, argv);
     else if (command == "--king-in-check")
         return handleKingInCheckCommand(argc, argv);
+    else if (command == "--app-mode")
+        return handleAppModeCommand(argc, argv);
 
     // Unknown command
     std::cout << "Invalid arguments passed in!\n\n";

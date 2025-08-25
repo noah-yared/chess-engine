@@ -87,5 +87,6 @@ int handleLegalMovesCommand(int argc, const char* argv[]);
 int handleFindBestCommand(int argc, const char* argv[]);
 int handleMakeMoveCommand(int argc, const char* argv[]);
 int handleKingInCheckCommand(int argc, const char* argv[]);
+int handleAppModeCommand(int argc, const char* argv[]);
 
 } // namespace cli

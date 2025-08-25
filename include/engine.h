@@ -191,7 +191,7 @@ class SearchEngine
         return bestEval;
     }
 
-    template <Color color>
+    template <Color color, bool easyMode = false>
     Line alphaBeta(int alpha, int beta, int depth, int originalDepth = DEFAULT_SEARCH_DEPTH) noexcept
     {
         auto possibleMoves = legalMoves<color>();
@@ -206,7 +206,7 @@ class SearchEngine
 
         if (!depth) // end of search
         {
-            int finalEval = quiescenceSearch<color>(alpha, beta);
+            int finalEval = easyMode ? quiescenceSearch<color>(alpha, beta) : terminalEval<color>();
             ttEvalStore(finalEval, 0, alpha, beta);
             return {.score = finalEval};
         }
@@ -299,13 +299,13 @@ class SearchEngine
             variant);
     }
 
-    template <Color color>
+    template <Color color, bool easyMode = false>
     MoveVariant search(int depth = DEFAULT_SEARCH_DEPTH) noexcept
     {
         undoStack_.clear();
         moveBuffer_.clear();
 
-        auto [maybeMove, score] = alphaBeta<color>(NEGINF, POSINF, depth);
+        auto [maybeMove, score] = alphaBeta<color, easyMode>(NEGINF, POSINF, depth);
 
         assert(maybeMove && "game is over, no further moves can be played!");
         assert(legalMoves<color>().contains(*maybeMove) && "move not found in legal moves");
@@ -315,9 +315,15 @@ class SearchEngine
         return *maybeMove;
     }
 
-    MoveVariant search(int depth = DEFAULT_SEARCH_DEPTH) noexcept
+    MoveVariant search(int depth = DEFAULT_SEARCH_DEPTH, bool easyMode = false) noexcept
     {
-        return turn() == Color::WHITE ? search<Color::WHITE>(depth) : search<Color::BLACK>(depth);
+        if (easyMode)
+            return turn() == Color::WHITE
+                ? search<Color::WHITE, true>(depth)
+                : search<Color::BLACK, true>(depth);
+        return turn() == Color::WHITE
+            ? search<Color::WHITE>(depth)
+            : search<Color::BLACK>(depth);
     }
 
     void dumpPosition(std::ostream& os = std::cout) const noexcept { os << position_ << '\n'; }
