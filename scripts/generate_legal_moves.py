@@ -29,7 +29,7 @@ def stringify_ucis(fen: str | None = None, ucis_per_row: int = 10, promo_to_quee
 
 if __name__ == "__main__":
     # replace with fen to generate ucis for
-    assert len(sys.argv[1]) == 2, "Invalid number of arguments!\nUsage: python [script_path] [fen_string]"
+    assert len(sys.argv) == 2, "Invalid number of arguments!\nUsage: python [script_path] [fen_string]"
     stringified_ucis = stringify_ucis(fen=sys.argv[1], promo_to_queen_only=True)
     print(stringified_ucis)
     # copy stringified ucis to clipboard
