@@ -214,7 +214,7 @@ void printLegalMoves(const std::string& fen)
     MoveList moves{};
     pos.isWhiteToMove() ? MoveGenerator::pushLegalMoves<Color::WHITE>(pos, moves)
                         : MoveGenerator::pushLegalMoves<Color::BLACK>(pos, moves);
-    std::cout << moves << '\n';
+    std::cout << moves;
 }
 
 void printBestMove(const std::string& fen, int depth)
@@ -409,32 +409,64 @@ int handleAppModeCommand(int argc, const char* argv[])
     std::string line;
     while (std::getline(std::cin, line))
     {
-        auto tokens = split(line);
+        auto tokens = split(line, ',');
         auto command = tokens[0];
         if (command == "make-move")
-        { // make-move <move>
-            engine.advance(uciToMove(tokens[1], engine.position()));
-            std::cout << engine.position().toFen() << '\n';
+        { // make-move,<move>[,<fen>]
+            if (tokens.size() == 3)
+            {
+                printNewFen({.uciMove = tokens[1], .oldFen = tokens[2]});
+                std::cout << std::endl;
+            }
+            else
+            {
+                engine.advance(uciToMove(tokens[1], engine.position()));
+                std::cout << engine.position().toFen() << '\n' << std::endl;
+            }
         }
         else if (command == "legal-moves")
-        { // legal-moves
-            if (engine.turn() == Color::WHITE)
-                std::cout << engine.legalMoves<Color::WHITE>();
+        { // legal-moves[,<fen>]
+            if (tokens.size() == 2)
+            {
+                printLegalMoves(tokens[1]);
+                std::cout << std::endl;
+            }
             else
-                std::cout << engine.legalMoves<Color::BLACK>();
+            {
+                if (engine.turn() == Color::WHITE)
+                    std::cout << engine.legalMoves<Color::WHITE>() << std::endl;
+                else
+                    std::cout << engine.legalMoves<Color::BLACK>() << std::endl;
+            }
         }
         else if (command == "find-best")
-        { // find-best <depth> <easy-mode>
+        { // find-best,<depth>,<easy-mode>
             std::cout << std::visit(
                 [](auto&& arg) { return arg.uci(); },
                 engine.search(std::stoi(tokens[1]), tokens[2] == "true")
-            ) << '\n';
+            ) << '\n' << std::endl;
         }
         else if (command == "king-in-check")
-        { // king-in-check
-            std::cout << std::boolalpha << (engine.turn() == Color::WHITE
-                ? MoveGenerator::isKingInCheck<Color::WHITE>(engine.position())
-                : MoveGenerator::isKingInCheck<Color::BLACK>(engine.position())) << '\n';
+        { // king-in-check[,<fen>]
+            if (tokens.size() == 2)
+            {
+                printIsKingInCheck(tokens[1]);
+                std::cout << std::endl;
+            }
+            else
+            {
+                std::cout << std::boolalpha << (engine.turn() == Color::WHITE
+                    ? MoveGenerator::isKingInCheck<Color::WHITE>(engine.position())
+                    : MoveGenerator::isKingInCheck<Color::BLACK>(engine.position())) << '\n' << std::endl;
+            }
+        }
+        else if (command == "current-fen")
+        { // current-fen
+            std::cout << engine.position().toFen() << '\n' << std::endl;
+        }
+        else if (command == "set-position")
+        { // set-position,<fen>
+            engine.setPosition(tokens[1]);
         }
         else
         {

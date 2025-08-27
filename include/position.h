@@ -97,7 +97,19 @@ class Position
     /////////////////////////
     // Static Evaluation   //
     /////////////////////////
-    [[nodiscard]] int evaluation() const noexcept { return Evaluator::evaluate(bitboards_); }
+    template <bool easyMode = false>
+    [[nodiscard]] int evaluation() const noexcept
+    {
+        if constexpr (easyMode)
+        {
+            const int randomNoise = (rand() % 200) - 100;
+            return Evaluator::evaluate(bitboards_) + randomNoise;
+        }
+        else
+        {
+            return Evaluator::evaluate(bitboards_);
+        }
+    }
     // for benchmarking/debugging
     [[nodiscard]] int evaluation_v1() const noexcept { return Evaluator::evaluate_v1(bitboards_); }
     [[nodiscard]] int evaluation_v2() const noexcept { return Evaluator::evaluate_v2(bitboards_); }

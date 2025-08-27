@@ -206,7 +206,7 @@ class SearchEngine
 
         if (!depth) // end of search
         {
-            int finalEval = easyMode ? quiescenceSearch<color>(alpha, beta) : terminalEval<color>();
+            int finalEval = easyMode ? position_.evaluation<true>() : quiescenceSearch<color>(alpha, beta);
             ttEvalStore(finalEval, 0, alpha, beta);
             return {.score = finalEval};
         }
@@ -281,6 +281,8 @@ class SearchEngine
     }
 
     const Position& position() const noexcept { return position_; }
+
+    void setPosition(const std::string& fen) noexcept { position_ = Position(fen); }
 
     Color turn() const noexcept { return position_.sideToMove(); }
 
