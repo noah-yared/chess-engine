@@ -17,7 +17,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native -fomit-frame-pointe
 set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG")
 
 # generate engine_config.h
-configure_file(${CMAKE_SOURCE_DIR}/include/engine_config.h.in ${CMAKE_BINARY_DIR}/engine_config.h)
+configure_file(${CMAKE_SOURCE_DIR}/src/engine_config.h.in ${CMAKE_BINARY_DIR}/engine_config.h)
 
 # engine library for reuse in other targets
 add_library(engine_lib STATIC
@@ -28,7 +28,7 @@ add_library(engine_lib STATIC
 )
 target_include_directories(engine_lib
   PUBLIC
-    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/src
 )
 
 # engine binary
