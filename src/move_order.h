@@ -9,14 +9,15 @@ class MoveOrdering
 {
   private:
     static constexpr std::array<std::array<int, NUM_PIECE_TYPES + 1>, NUM_PIECE_TYPES + 1> MVVLVA {{
-        {10, 11, 12, 13, 14, 15, 0}, // victim P, attacker P, R, N, B, Q, K, None
-        {40, 41, 42, 43, 44, 45, 0}, // victim R, attacker P, R, N, B, Q, K, None
-        {20, 21, 22, 23, 24, 25, 0}, // victim N, attacker P, R, N, B, Q, K, None
-        {30, 31, 32, 33, 34, 35, 0}, // victim B, attacker P, R, N, B, Q, K, None
-        {50, 51, 52, 53, 54, 55, 0}, // victim Q, attacker P, R, N, B, Q, K, None
+        {15, 12, 14, 13, 11, 10, 0}, // victim P, attacker P, R, N, B, Q, K, None
+        {45, 42, 44, 43, 41, 40, 0}, // victim R, attacker P, R, N, B, Q, K, None
+        {25, 22, 24, 23, 21, 20, 0}, // victim N, attacker P, R, N, B, Q, K, None
+        {35, 32, 34, 33, 31, 30, 0}, // victim B, attacker P, R, N, B, Q, K, None
+        {55, 52, 54, 53, 51, 50, 0}, // victim Q, attacker P, R, N, B, Q, K, None
         {0, 0, 0, 0, 0, 0, 0},       // victim K, attacker P, R, N, B, Q, K, None
         {0, 0, 0, 0, 0, 0, 0},       // victim None, attacker P, R, N, B, Q, K, None
     }};
+
 
     template<MoveType mType>
     [[nodiscard]] static int mvvlva(const Move<mType> move) noexcept
