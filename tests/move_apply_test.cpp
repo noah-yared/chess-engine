@@ -2,8 +2,8 @@
 
 #include <string>
 
-#include "move.h"
-#include "position.h"
+#include "move/move.h"
+#include "board/position.h"
 #include "test_utils.h"
 
 class MoveApplyTest : public ChessTestFixture

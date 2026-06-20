@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "position.h"
+#include "board/position.h"
 
 static void BM_Evaluation_v1_StartPos(benchmark::State& state)
 {

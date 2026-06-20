@@ -2,9 +2,9 @@
 
 #include <variant>
 
-#include "move_generator.h"
-#include "move_list.h"
-#include "position.h"
+#include "move/move_generator.h"
+#include "move/move_list.h"
+#include "board/position.h"
 #include "test_utils.h"
 
 class PerftTest : public ChessTestFixture

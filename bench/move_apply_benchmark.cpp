@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 
-#include "move_generator.h"
-#include "position.h"
+#include "move/move_generator.h"
+#include "board/position.h"
 
 static void BM_CopyPosition(benchmark::State& state)
 {

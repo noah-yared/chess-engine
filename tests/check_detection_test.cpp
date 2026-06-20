@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
-#include "move_generator.h"
-#include "position.h"
+#include "move/move_generator.h"
+#include "board/position.h"
 #include "test_utils.h"
 
 class CheckDetectionTest : public ChessTestFixture

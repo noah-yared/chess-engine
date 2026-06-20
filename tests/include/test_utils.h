@@ -2,10 +2,10 @@
 
 #include <gtest/gtest.h>
 
-#include "move_factory.h"
-#include "move_generator.h"
-#include "move_list.h"
-#include "position.h"
+#include "move/move_utils.h"
+#include "move/move_generator.h"
+#include "move/move_list.h"
+#include "board/position.h"
 
 class ChessTestFixture : public ::testing::Test
 {

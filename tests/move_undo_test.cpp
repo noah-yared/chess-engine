@@ -2,9 +2,9 @@
 
 #include <string>
 
-#include "board_utils.h"
-#include "engine.h"
-#include "move.h"
+#include "board/squares.h"
+#include "search/engine.h"
+#include "move/move.h"
 #include "test_utils.h"
 
 class MoveUndoTest : public ChessTestFixture

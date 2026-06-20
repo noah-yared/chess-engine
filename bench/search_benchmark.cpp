@@ -1,6 +1,6 @@
 #include <benchmark/benchmark.h>
 
-#include "engine.h"
+#include "search/engine.h"
 
 static void BM_SearchBaseline_StartPos(benchmark::State& state)
 {

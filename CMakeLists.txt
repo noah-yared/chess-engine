@@ -17,14 +17,14 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -mtune=native -fomit-frame-pointe
 set (CMAKE_CXX_FLAGS_RELWITHDEBINFO "-g -O3 -DNDEBUG")
 
 # generate engine_config.h
-configure_file(${CMAKE_SOURCE_DIR}/src/engine_config.h.in ${CMAKE_BINARY_DIR}/engine_config.h)
+configure_file(${CMAKE_SOURCE_DIR}/src/app/engine_config.h.in ${CMAKE_BINARY_DIR}/engine_config.h)
 
 # engine library for reuse in other targets
 add_library(engine_lib STATIC
-  src/bitboards.cpp
-  src/board_state.cpp
-  src/evaluate.cpp
-  src/move_list.cpp
+  src/board/bitboards.cpp
+  src/board/board_state.cpp
+  src/eval/evaluate.cpp
+  src/move/move_list.cpp
 )
 target_include_directories(engine_lib
   PUBLIC
@@ -33,8 +33,8 @@ target_include_directories(engine_lib
 
 # engine binary
 add_executable(engine
-  src/cli.cpp
-  src/main.cpp
+  src/app/cli.cpp
+  src/app/main.cpp
 )
 target_include_directories(engine
   PRIVATE
