@@ -258,9 +258,11 @@ class Searcher
         }
 
         if constexpr (isMaximizingPlayer)
-            storeEvalIntoTT(context, alpha, ply, originalAlpha, originalBeta, currentBestMove);
+            storeEvalIntoTT(context, alpha, depthRemaining, originalAlpha, originalBeta,
+                            currentBestMove);
         else
-            storeEvalIntoTT(context, beta, ply, originalAlpha, originalBeta, currentBestMove);
+            storeEvalIntoTT(context, beta, depthRemaining, originalAlpha, originalBeta,
+                            currentBestMove);
 
         return NodeResult{.score = isMaximizingPlayer ? alpha : beta};
     }
