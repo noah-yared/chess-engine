@@ -2,10 +2,10 @@
 
 #include <gtest/gtest.h>
 
-#include "move/move_utils.h"
+#include "board/position.h"
 #include "move/move_generator.h"
 #include "move/move_list.h"
-#include "board/position.h"
+#include "move/move_utils.h"
 
 class ChessTestFixture : public ::testing::Test
 {
@@ -27,9 +27,8 @@ class ChessTestFixture : public ::testing::Test
     [[nodiscard]] MoveList legalMoves() const
     {
         moveBuffer_.clear();
-        pos.isWhiteToMove()
-            ? MoveGenerator::pushLegalMoves<Color::WHITE>(pos, moveBuffer_)
-            : MoveGenerator::pushLegalMoves<Color::BLACK>(pos, moveBuffer_);
+        pos.isWhiteToMove() ? MoveGenerator::pushLegalMoves<Color::WHITE>(pos, moveBuffer_)
+                            : MoveGenerator::pushLegalMoves<Color::BLACK>(pos, moveBuffer_);
         return moveBuffer_;
     }
 

@@ -110,10 +110,12 @@ void printPerftResults(const PerftArgs& args, std::ofstream& ofs)
                                          : perft<Color::BLACK>(pos, args.depth);
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    auto durationForNps = duration == 0 ? 1 : duration;
     std::cout << "Perft(" << args.depth << ") complete!\n\n"
               << "Time taken:       " << std::setw(12) << duration << " ms\n"
               << "Nodes generated:  " << std::setw(12) << nodeCount << " nodes\n"
-              << "Nodes per second: " << std::setw(12) << nodeCount * 1000 / duration << " nps\n\n";
+              << "Nodes per second: " << std::setw(12) << nodeCount * 1000 / durationForNps
+              << " nps\n\n";
 }
 
 SelfPlayArgs parseSelfPlayArgs(int argc, const char** argv)
@@ -155,7 +157,8 @@ void simulateSelfPlay(const SelfPlayArgs& args, const char* exePath)
     std::string fen = args.fen.value_or(std::string(STARTING_FEN)); // default fen if none provided
 
     // create search engine
-    SearchEngine engine(fen);
+    EngineController engine(fen);
+    u64 nodesSearched = 0ULL;
 
     // create default output file name
     const auto time = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
@@ -179,51 +182,58 @@ void simulateSelfPlay(const SelfPlayArgs& args, const char* exePath)
               << ".\n\n";
 
     // create output file stream
-    std::ofstream ofs((outputDirectory / outputFile).string());
-    auto& os = outputToFile ? ofs : std::cout;
-
-    // recursive lambda for self-play, takes a lambda as a parameter to call on the next move
-    auto play = [&engine, &os, searchDepth, numMoves]<Color sideToMove>(auto&& self,
-                                                                        int moveNumber = 1) -> void
+    std::ofstream ofs;
+    if (outputToFile)
     {
-        if (moveNumber > numMoves)
-            return;
-        auto move = engine.search<sideToMove>(searchDepth);
-        os << "Move #" << moveNumber << ": "
-           << std::visit([](auto&& arg) { return arg.uci(); }, move) << '\n';
-        engine.dumpPosition(os);
-        self.template operator()<opposite<sideToMove>()>(self, moveNumber + 1);
-    };
+        ofs.open((outputDirectory / outputFile).string());
+        if (!ofs)
+        {
+            std::cerr << "Error opening output file. Outputting to console instead.\n\n";
+            outputToFile = false;
+        }
+    }
+    auto& os = outputToFile ? static_cast<std::ostream&>(ofs) : std::cout;
 
     // start self-play
     auto start = std::chrono::high_resolution_clock::now();
-    engine.turn() == Color::WHITE ? play.operator()<Color::WHITE>(play)
-                                  : play.operator()<Color::BLACK>(play);
+    for (int moveNumber = 1; moveNumber <= numMoves; ++moveNumber)
+    {
+        auto result = engine.search(searchDepth);
+        auto move = result.bestMove;
+        nodesSearched += result.stats.nodesSearched;
+        engine.advance(move);
+        os << "Move #" << moveNumber << ": "
+           << std::visit([](auto&& arg) { return arg.uci(); }, move) << '\n';
+        os << engine.position() << '\n';
+    }
     auto end = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    auto durationForNps = duration == 0 ? 1 : duration;
 
     // print results to console
     std::cout << "Simulation complete!\n\n"
               << "Time taken:       " << std::setw(12) << static_cast<double>(duration) / 1000.0
               << " secs\n"
-              << "Nodes searched:   " << std::setw(12) << engine.nodesSearched() << " nodes\n"
-              << "Nodes per second: " << std::setw(12) << engine.nodesSearched() * 1000 / duration
+              << "Nodes searched:   " << std::setw(12) << nodesSearched << " nodes\n"
+              << "Nodes per second: " << std::setw(12) << nodesSearched * 1000 / durationForNps
               << " nps\n\n";
 }
 
-void printLegalMoves(const std::string& fen)
+void printLegalMoves(const Position& pos)
 {
-    Position pos(fen);
     MoveList moves{};
     pos.isWhiteToMove() ? MoveGenerator::pushLegalMoves<Color::WHITE>(pos, moves)
                         : MoveGenerator::pushLegalMoves<Color::BLACK>(pos, moves);
     std::cout << moves;
 }
 
+void printLegalMoves(const std::string& fen) { printLegalMoves(Position(fen)); }
+
 void printBestMove(const std::string& fen, int depth)
 {
-    SearchEngine engine(fen);
-    std::cout << std::visit([](auto&& arg) { return arg.uci(); }, engine.search(depth)) << '\n';
+    EngineController engine(fen);
+    auto result = engine.search(depth);
+    std::cout << std::visit([](auto&& arg) { return arg.uci(); }, result.bestMove) << '\n';
 }
 
 MakeMoveArgs parseMakeMoveArgs(int argc, const char* argv[])
@@ -250,7 +260,7 @@ MakeMoveArgs parseMakeMoveArgs(int argc, const char* argv[])
 
 void printNewFen(const MakeMoveArgs& args)
 {
-    SearchEngine engine(args.oldFen);
+    EngineController engine(args.oldFen);
     engine.advance(uciToMove(args.uciMove, engine.position()));
     std::cout << engine.position().toFen() << '\n';
 }
@@ -408,24 +418,31 @@ int handleAppModeCommand(int argc, const char* argv[])
     if (argc != 2)
         return -1;
 
-    SearchEngine engine;
+    EngineController engine;
 
     std::string line;
     while (std::getline(std::cin, line))
     {
         auto tokens = split(line, ',');
+        if (tokens.empty())
+            continue;
         auto command = tokens[0];
         if (command == "make-move")
         { // make-move,<move>[,<fen>]
             if (tokens.size() == 3)
             {
-                printNewFen({.uciMove = tokens[1], .oldFen = tokens[2]});
+                printNewFen({.oldFen = tokens[2], .uciMove = tokens[1]});
                 std::cout << std::endl;
             }
-            else
+            else if (tokens.size() == 2)
             {
                 engine.advance(uciToMove(tokens[1], engine.position()));
                 std::cout << engine.position().toFen() << '\n' << std::endl;
+            }
+            else
+            {
+                std::cout << "Invalid command: " << line << '\n';
+                return -1;
             }
         }
         else if (command == "legal-moves")
@@ -435,20 +452,29 @@ int handleAppModeCommand(int argc, const char* argv[])
                 printLegalMoves(tokens[1]);
                 std::cout << std::endl;
             }
+            else if (tokens.size() == 1)
+            {
+                printLegalMoves(engine.position());
+                std::cout << std::endl;
+            }
             else
             {
-                if (engine.turn() == Color::WHITE)
-                    std::cout << engine.legalMoves<Color::WHITE>() << std::endl;
-                else
-                    std::cout << engine.legalMoves<Color::BLACK>() << std::endl;
+                std::cout << "Invalid command: " << line << '\n';
+                return -1;
             }
         }
         else if (command == "find-best")
-        { // find-best,<depth>,<difficulty>
-            std::cout << std::visit(
-                             [](auto&& arg) { return arg.uci(); },
-                             engine.search(std::stoi(tokens[1]), Difficulty(std::stoi(tokens[2]))))
-                      << '\n'
+        { // find-best,<depth>[,<difficulty>]
+            if (tokens.size() != 2 && tokens.size() != 3)
+            {
+                std::cout << "Invalid command: " << line << '\n';
+                return -1;
+            }
+            auto depth = std::stoi(tokens[1]);
+            auto move = tokens.size() == 3
+                            ? engine.playEngineMove(Difficulty(std::stoi(tokens[2])), depth)
+                            : engine.playEngineMove(depth);
+            std::cout << std::visit([](auto&& arg) { return arg.uci(); }, move) << '\n'
                       << std::endl;
         }
         else if (command == "king-in-check")
@@ -458,7 +484,7 @@ int handleAppModeCommand(int argc, const char* argv[])
                 printIsKingInCheck(tokens[1]);
                 std::cout << std::endl;
             }
-            else
+            else if (tokens.size() == 1)
             {
                 std::cout << std::boolalpha
                           << (engine.turn() == Color::WHITE
@@ -467,13 +493,28 @@ int handleAppModeCommand(int argc, const char* argv[])
                           << '\n'
                           << std::endl;
             }
+            else
+            {
+                std::cout << "Invalid command: " << line << '\n';
+                return -1;
+            }
         }
         else if (command == "current-fen")
         { // current-fen
+            if (tokens.size() != 1)
+            {
+                std::cout << "Invalid command: " << line << '\n';
+                return -1;
+            }
             std::cout << engine.position().toFen() << '\n' << std::endl;
         }
         else if (command == "set-position")
         { // set-position,<fen>
+            if (tokens.size() != 2)
+            {
+                std::cout << "Invalid command: " << line << '\n';
+                return -1;
+            }
             engine.setPosition(tokens[1]);
         }
         else

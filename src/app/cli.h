@@ -2,7 +2,7 @@
 
 #include "board/position.h"
 #include "move/move_generator.h"
-#include "search/engine.h"
+#include "search/engine_controller.h"
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -61,6 +61,7 @@ SelfPlayArgs parseSelfPlayArgs(int argc, const char** argv);
 void simulateSelfPlay(const SelfPlayArgs& args, const char* exePath);
 
 // Legal moves functionality
+void printLegalMoves(const Position& pos);
 void printLegalMoves(const std::string& fen);
 
 // Best move functionality

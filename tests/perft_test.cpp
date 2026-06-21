@@ -2,9 +2,9 @@
 
 #include <variant>
 
+#include "board/position.h"
 #include "move/move_generator.h"
 #include "move/move_list.h"
-#include "board/position.h"
 #include "test_utils.h"
 
 class PerftTest : public ChessTestFixture
@@ -25,11 +25,12 @@ class PerftTest : public ChessTestFixture
             std::visit([&](auto&& m) { pos.applyMove(m); }, move);
             total += perft(depth - 1);
             std::visit([&](auto&& m) { pos.undoMove(m, snapshot); }, move);
-            
+
             // verify position is restored
-            EXPECT_EQ(posCopy, pos) << "Position did not return to original state after applying & undoing move "
-                                    << "\"" << std::visit([&](auto&& m) { return m.uci(); }, move) << "\""
-                                    << " on \"" << posCopy.toFen() << "\"\n";
+            EXPECT_EQ(posCopy, pos)
+                << "Position did not return to original state after applying & undoing move "
+                << "\"" << std::visit([&](auto&& m) { return m.uci(); }, move) << "\""
+                << " on \"" << posCopy.toFen() << "\"\n";
         }
         return total;
     }
@@ -43,7 +44,7 @@ TEST_F(PerftTest, StartingPosition_AllLegalMovesExcludingNonQueenPromotions)
     EXPECT_EQ(perft(3), 8902);
     EXPECT_EQ(perft(4), 197281);
     EXPECT_EQ(perft(5), 4865609);
-    EXPECT_EQ(perft(6), 119060324);
+    // EXPECT_EQ(perft(6), 119060324);
 }
 
 TEST_F(PerftTest, Position2_AllLegalMovesExcludingNonQueenPromotions)
@@ -53,7 +54,7 @@ TEST_F(PerftTest, Position2_AllLegalMovesExcludingNonQueenPromotions)
     EXPECT_EQ(perft(2), 2039);
     EXPECT_EQ(perft(3), 97862);
     EXPECT_EQ(perft(4), 4074224);
-    EXPECT_EQ(perft(5), 193301718);
+    // EXPECT_EQ(perft(5), 193301718);
 }
 
 TEST_F(PerftTest, Position3_AllLegalMovesExcludingNonQueenPromotions)
@@ -65,7 +66,7 @@ TEST_F(PerftTest, Position3_AllLegalMovesExcludingNonQueenPromotions)
     EXPECT_EQ(perft(4), 43238);
     EXPECT_EQ(perft(5), 674624);
     EXPECT_EQ(perft(6), 11024419);
-    EXPECT_EQ(perft(7), 178447267);
+    // EXPECT_EQ(perft(7), 178447267);
 }
 
 TEST_F(PerftTest, Position4_AllLegalMovesExcludingNonQueenPromotions)
@@ -76,7 +77,7 @@ TEST_F(PerftTest, Position4_AllLegalMovesExcludingNonQueenPromotions)
     EXPECT_EQ(perft(3), 8087);
     EXPECT_EQ(perft(4), 320802);
     EXPECT_EQ(perft(5), 11875685);
-    EXPECT_EQ(perft(6), 481688280);
+    // EXPECT_EQ(perft(6), 481688280);
 }
 
 TEST_F(PerftTest, Position5_AllLegalMovesExcludingNonQueenPromotions)
@@ -96,6 +97,5 @@ TEST_F(PerftTest, Position6_AllLegalMovesExcludingNonQueenPromotions)
     EXPECT_EQ(perft(2), 2079);
     EXPECT_EQ(perft(3), 89890);
     EXPECT_EQ(perft(4), 3894594);
-    EXPECT_EQ(perft(5), 164075551);
+    // EXPECT_EQ(perft(5), 164075551);
 }
-

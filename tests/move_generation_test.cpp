@@ -8,11 +8,11 @@
 #include <type_traits>
 #include <unordered_set>
 
+#include "board/position.h"
 #include "board/squares.h"
 #include "move/move_generator.h"
 #include "move/move_utils.h"
 #include "move/uci.h"
-#include "board/position.h"
 #include "test_utils.h"
 
 class MoveGenerationTest : public ChessTestFixture

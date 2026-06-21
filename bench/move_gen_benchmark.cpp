@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 
-#include "move/move_generator.h"
 #include "board/position.h"
+#include "move/move_generator.h"
 
 static void BM_MoveGenBaseline_StartPos(benchmark::State& state)
 {

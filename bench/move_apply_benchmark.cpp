@@ -1,7 +1,7 @@
 #include <benchmark/benchmark.h>
 
-#include "move/move_generator.h"
 #include "board/position.h"
+#include "move/move_generator.h"
 
 static void BM_CopyPosition(benchmark::State& state)
 {
@@ -17,9 +17,9 @@ static void BM_CopyPosition(benchmark::State& state)
             auto move = ml[i % ml.size()];
             std::visit([&](auto&& arg) { tmp.applyMove(arg); }, move);
             int eval = tmp.evaluation();
-	    benchmark::DoNotOptimize(tmp);
-	    benchmark::DoNotOptimize(eval);
-	    benchmark::ClobberMemory();
+            benchmark::DoNotOptimize(tmp);
+            benchmark::DoNotOptimize(eval);
+            benchmark::ClobberMemory();
         }
     }
 }
@@ -40,8 +40,8 @@ static void BM_ModifyPositionInPlace(benchmark::State& state)
             std::visit([&](auto&& arg) { pos.applyMove(arg); }, move);
             int eval = pos.evaluation();
             std::visit([&](auto&& arg) { pos.undoMove(arg, pos.getStateSnapshot()); }, move);
-	    benchmark::DoNotOptimize(eval);
-	    benchmark::ClobberMemory();
+            benchmark::DoNotOptimize(eval);
+            benchmark::ClobberMemory();
         }
     }
 }

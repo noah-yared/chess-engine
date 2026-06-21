@@ -3,7 +3,6 @@
 #include <string>
 
 #include "board/squares.h"
-#include "search/engine.h"
 #include "move/move.h"
 #include "test_utils.h"
 
@@ -14,25 +13,20 @@ class MoveUndoTest : public ChessTestFixture
         requires(sizeof...(mTypes) != 0) // should be at least one move
     void testMoveSequence(const mTypes... moves)
     {
-        auto engine = createTestEngine();
-        testMoveSequenceImpl(engine, moves...);
+        testMoveSequenceImpl(pos, moves...);
     }
 
   private:
-    [[nodiscard]] SearchEngine createTestEngine() const
-    {
-        return SearchEngine::withEmptyTTForTesting(pos);
-    }
-
     template <typename mType, typename... rest>
-    void testMoveSequenceImpl(SearchEngine& engine, const mType move, const rest... moves)
+    void testMoveSequenceImpl(Position& position, const mType move, const rest... moves)
     {
-        auto startingPos = engine.position();
-        engine.advance(move);
+        auto startingPos = position;
+        auto snapshot = position.getStateSnapshot();
+        position.applyMove(move);
         if constexpr (sizeof...(moves) > 0)
-            testMoveSequenceImpl(engine, moves...);
-        engine.backtrack(move);
-        EXPECT_EQ(startingPos, engine.position());
+            testMoveSequenceImpl(position, moves...);
+        position.undoMove(move, snapshot);
+        EXPECT_EQ(startingPos, position);
     }
 };
 
