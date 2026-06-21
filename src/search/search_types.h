@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "board/constants.h"
 #include "move/move.h"
 
@@ -36,7 +38,8 @@ struct SearchConfig
     {
         SearchConfig config;
         config.limits.maxDepth = maxDepth;
-        config.limits.timeLimitMS = timeLimitMS;
+        // Guard against caller-provided budgets that are too small for a useful timed search.
+        config.limits.timeLimitMS = std::max(timeLimitMS, MIN_SEARCH_TIME_BUDGET);
         config.options.useTimeManagement = true;
         return config;
     }

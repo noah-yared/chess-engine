@@ -27,6 +27,8 @@ constexpr int MAX_SEARCH_PLY = MAX_SEARCH_DEPTH + MAX_QUIESCENCE_DEPTH;
 constexpr int DEFAULT_SEARCH_DEPTH = 5;
 constexpr int DEFAULT_SEARCH_TIME_BUDGET = 1000;
 
+constexpr int MIN_SEARCH_TIME_BUDGET = 20;
+
 constexpr int ABORT_CHECK_PERIOD = 1024;
 
 constexpr int NUM_DIRECTIONS = 8;

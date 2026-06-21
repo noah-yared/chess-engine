@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstdlib>
 #include <optional>
 
 #include "board/constants.h"
@@ -16,6 +17,9 @@
 class Searcher
 {
   public:
+    // Preconditions:
+    // - root has at least one legal move.
+    // - config.limits.maxDepth >= 1.
     static SearchResult search(const Position& root, const SearchConfig& config,
                                TranspositionTable* tt)
     {
@@ -33,14 +37,16 @@ class Searcher
             auto newResult = root.isWhiteToMove() ? searchRoot<Color::WHITE>(root, context, depth)
                                                   : searchRoot<Color::BLACK>(root, context, depth);
             if (newResult.aborted)
-            {
                 break; // ran out of search time
-            }
 
             lastCompleted = newResult;
         }
 
-        assert(lastCompleted.has_value());
+        if (!lastCompleted.has_value())
+        {
+            assert(false && "Search failed before completing depth 1!");
+            std::abort();
+        }
         return *lastCompleted;
     }
 

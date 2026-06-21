@@ -20,6 +20,7 @@ class EngineController
     explicit EngineController(const Position& position) : position_{position}, tt_{} {};
     explicit EngineController(const std::string& fen) : position_{fen}, tt_{} {};
 
+    // Precondition for search/playEngineMove: position_ has at least one legal move.
     SearchResult search(const SearchConfig& config)
     {
         return Searcher::search(position_, config, config.options.useTT ? &tt_ : nullptr);
@@ -31,6 +32,7 @@ class EngineController
         return search(SearchConfig::fixedDepth(depth));
     }
 
+    // Same precondition as search().
     MoveVariant playEngineMove(const SearchConfig& config)
     {
         auto result = search(config);
