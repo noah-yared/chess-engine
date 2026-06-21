@@ -61,7 +61,7 @@ TEST_F(SearchTest, TimedSearchWithHighDepthStopsOnTime)
 {
     loadStartingPosition();
     TranspositionTable tt(257);
-    auto config = SearchConfig::fixedTime(20, 64 /* very high max depth */);
+    auto config = SearchConfig::fixedTime(20, MAX_SEARCH_DEPTH /* very high max depth */);
 
     const auto start = std::chrono::steady_clock::now();
     auto result = Searcher::search(pos, config, &tt);

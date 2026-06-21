@@ -39,7 +39,7 @@ class EngineController
     MoveVariant playEngineMove(Strength strength)
     {
         return playEngineMove(
-            SearchConfig::fixedTime(computeTimeBudgetMS(strength), 999 /* infinite max depth */));
+            SearchConfig::fixedTime(computeTimeBudgetMS(strength), MAX_SEARCH_DEPTH));
     }
 
     void advance(MoveVariant move) noexcept

@@ -20,6 +20,10 @@ constexpr int MATE_DEPTH_PENALTY = 1000;
 
 constexpr int MAX_POSSIBLE_LEGAL_MOVES = 218;
 
+constexpr int MAX_SEARCH_DEPTH = 64;
+constexpr int MAX_QUIESCENCE_DEPTH = 50;
+constexpr int MAX_SEARCH_PLY = MAX_SEARCH_DEPTH + MAX_QUIESCENCE_DEPTH;
+
 constexpr int DEFAULT_SEARCH_DEPTH = 5;
 constexpr int DEFAULT_SEARCH_TIME_BUDGET = 5000;
 
