@@ -32,7 +32,7 @@ struct SearchConfig
     }
 
     static SearchConfig fixedTime(int timeLimitMS = DEFAULT_SEARCH_TIME_BUDGET,
-                                  int maxDepth = DEFAULT_SEARCH_DEPTH)
+                                  int maxDepth = MAX_SEARCH_DEPTH)
     {
         SearchConfig config;
         config.limits.maxDepth = maxDepth;

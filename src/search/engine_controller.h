@@ -1,6 +1,8 @@
 #pragma once
 
 #include <array>
+#include <cassert>
+#include <cstdlib>
 #include <type_traits>
 #include <variant>
 
@@ -38,8 +40,7 @@ class EngineController
 
     MoveVariant playEngineMove(Strength strength)
     {
-        return playEngineMove(
-            SearchConfig::fixedTime(computeTimeBudgetMS(strength), MAX_SEARCH_DEPTH));
+        return playEngineMove(buildStrengthConfig(strength));
     }
 
     void advance(MoveVariant move) noexcept
@@ -60,8 +61,25 @@ class EngineController
 
     [[nodiscard]] static int computeTimeBudgetMS(Strength strength)
     {
-        std::array<int, static_cast<int>(Strength::NUM_LEVELS)> timeBudgetsMS = {500,  1000, 2000,
-                                                                                 4000, 8000, 10000};
+        std::array<int, static_cast<int>(Strength::NUM_LEVELS)> timeBudgetsMS = {100, 1500, 8000};
         return timeBudgetsMS[static_cast<int>(strength)];
+    }
+
+    [[nodiscard]] static SearchConfig buildStrengthConfig(Strength strength)
+    {
+        switch (strength)
+        {
+        case Strength::LOW:
+            return SearchConfig::fixedTime(computeTimeBudgetMS(strength))
+                .withoutQuiescence() // misses tactics/exchanges
+                .withoutTT();        // slow down search
+        case Strength::MEDIUM:
+        case Strength::HIGH:
+            return SearchConfig::fixedTime(computeTimeBudgetMS(strength));
+        default:
+            // should not reach this case
+            assert(false && "Invalid strength passed in!");
+            std::abort();
+        }
     }
 };
