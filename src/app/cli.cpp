@@ -3,7 +3,7 @@
 #include "engine_config.h"
 #include "move/move_generator.h"
 #include "move/uci.h"
-#include "search/difficulty.h"
+#include "search/strength.h"
 #include <array>
 #include <chrono>
 #include <filesystem>
@@ -464,16 +464,21 @@ int handleAppModeCommand(int argc, const char* argv[])
             }
         }
         else if (command == "find-best")
-        { // find-best,<depth>[,<difficulty>]
-            if (tokens.size() != 2 && tokens.size() != 3)
+        { // find-best,<strength>
+            if (tokens.size() != 2)
             {
                 std::cout << "Invalid command: " << line << '\n';
                 return -1;
             }
-            auto depth = std::stoi(tokens[1]);
-            auto move = tokens.size() == 3
-                            ? engine.playEngineMove(Difficulty(std::stoi(tokens[2])), depth)
-                            : engine.playEngineMove(depth);
+
+            int strengthLevel = std::stoi(tokens[1]);
+            if (strengthLevel < 0 || strengthLevel >= static_cast<int>(Strength::NUM_LEVELS))
+            {
+                std::cout << "Invalid strength level: " << tokens[1] << '\n';
+                return -1;
+            }
+
+            auto move = engine.playEngineMove(Strength(strengthLevel));
             std::cout << std::visit([](auto&& arg) { return arg.uci(); }, move) << '\n'
                       << std::endl;
         }

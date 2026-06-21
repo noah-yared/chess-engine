@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <chrono>
 #include <optional>
 
 #include "board/constants.h"
@@ -19,7 +20,7 @@ class Searcher
                                TranspositionTable* tt)
     {
         // initialize search context
-        Context context(root, config, tt);
+        Context context(root, config, config.options.useTT ? tt : nullptr);
 
         // ensure valid max depth
         assert(context.config->limits.maxDepth >= 1 && "maxDepth must be >= 1!");
@@ -57,6 +58,30 @@ class Searcher
         bool aborted = false;
     };
 
+    class Timer
+    {
+      public:
+        Timer() = delete;
+        explicit Timer(int durationMS)
+            : deadline_{std::chrono::steady_clock::now() + std::chrono::milliseconds(durationMS)},
+              numPolls_{0}
+        {
+        }
+
+        [[nodiscard]] bool isExpired()
+        {
+            if (++numPolls_ % ABORT_CHECK_PERIOD != 0)
+            {
+                return false;
+            }
+            return std::chrono::steady_clock::now() >= deadline_;
+        }
+
+      private:
+        std::chrono::steady_clock::time_point deadline_;
+        u64 numPolls_;
+    };
+
     struct Context
     {
         Position position;
@@ -65,10 +90,20 @@ class Searcher
         MoveList moveBuffer;
         TranspositionTable* tt = nullptr;
         const SearchConfig* config = nullptr;
+        std::optional<Timer> timer;
 
         Context(const Position& position, const SearchConfig& config, TranspositionTable* tt)
             : position(position), stats(), undoStack(), moveBuffer(), tt(tt), config(&config)
         {
+            // add deadline for search if time control enabled
+            if (config.options.useTimeManagement)
+            {
+                timer.emplace(config.limits.timeLimitMS);
+            }
+            else
+            {
+                timer = std::nullopt;
+            }
         }
     };
 
@@ -159,11 +194,19 @@ class Searcher
     template <Color color>
     static NodeResult alphaBeta(Context& context, int alpha, int beta, int depthRemaining, int ply)
     {
+        if (context.config->options.useTimeManagement && context.timer->isExpired())
+        {
+            return NodeResult{.aborted = true};
+        }
+
         context.stats.nodesSearched++;
 
         if (depthRemaining == 0)
         {
-            return quiesce<color>(context, alpha, beta, ply);
+            if (context.config->options.useQuiescence)
+                return quiesce<color>(context, alpha, beta, ply);
+
+            return {.score = context.position.evaluation()};
         }
 
         MoveOrdering::SortableMoveList sortedMoves;
@@ -183,11 +226,16 @@ class Searcher
             const auto move = sortedMoves.moves[i].move;
 
             advance(context, move);
-            int score =
-                alphaBeta<opposite<color>()>(context, alpha, beta, depthRemaining - 1, ply + 1)
-                    .score;
+            auto result =
+                alphaBeta<opposite<color>()>(context, alpha, beta, depthRemaining - 1, ply + 1);
             backtrack(context, move);
 
+            if (result.aborted)
+            {
+                return result; // child search node aborted
+            }
+
+            int score = result.score;
             if constexpr (isMaximizingPlayer)
             {
                 if (score > alpha)
@@ -206,9 +254,7 @@ class Searcher
             }
 
             if (beta <= alpha)
-            {
                 break;
-            }
         }
 
         if constexpr (isMaximizingPlayer)
@@ -222,6 +268,11 @@ class Searcher
     template <Color color>
     static NodeResult quiesce(Context& context, int alpha, int beta, int ply)
     {
+        if (context.config->options.useTimeManagement && context.timer->isExpired())
+        {
+            return NodeResult{.aborted = true};
+        }
+
         // context.stats.nodesSearched++;
 
         // standing pat (https://www.chessprogramming.org/Quiescence_Search)
@@ -230,24 +281,16 @@ class Searcher
         if constexpr (color == Color::WHITE)
         {
             if (bestValue >= beta)
-            {
                 return NodeResult{.score = bestValue};
-            }
             if (bestValue > alpha)
-            {
                 alpha = bestValue;
-            }
         }
         else
         {
             if (bestValue <= alpha)
-            {
                 return NodeResult{.score = bestValue};
-            }
             if (bestValue < beta)
-            {
                 beta = bestValue;
-            }
         }
 
         MoveOrdering::SortableMoveList sortedMoves;
@@ -258,38 +301,32 @@ class Searcher
             const auto move = sortedMoves.moves[i].move;
 
             advance(context, move);
-            int score = quiesce<opposite<color>()>(context, alpha, beta, ply + 1).score;
+            auto result = quiesce<opposite<color>()>(context, alpha, beta, ply + 1);
             backtrack(context, move);
 
+            if (result.aborted)
+            {
+                return result; // child search node aborted
+            }
+
+            int score = result.score;
             if constexpr (color == Color::WHITE)
             {
                 if (score >= beta)
-                {
                     return NodeResult{.score = score};
-                }
                 if (score > bestValue)
-                {
                     bestValue = score;
-                }
                 if (score > alpha)
-                {
                     alpha = score;
-                }
             }
             else
             {
                 if (score <= alpha)
-                {
                     return NodeResult{.score = score};
-                }
                 if (score < bestValue)
-                {
                     bestValue = score;
-                }
                 if (score < beta)
-                {
                     beta = score;
-                }
             }
         }
 
@@ -310,9 +347,15 @@ class Searcher
             const auto move = sortedMoves.moves[i].move;
 
             advance(context, move);
-            int score = alphaBeta<opposite<color>()>(context, NEGINF, POSINF, depth - 1, 1).score;
+            auto result = alphaBeta<opposite<color>()>(context, NEGINF, POSINF, depth - 1, 1);
             backtrack(context, move);
 
+            if (result.aborted)
+            {
+                return SearchResult{.aborted = true};
+            }
+
+            int score = result.score;
             if (root.isWhiteToMove())
             {
                 if (score >= bestScore)

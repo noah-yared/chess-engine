@@ -21,6 +21,9 @@ constexpr int MATE_DEPTH_PENALTY = 1000;
 constexpr int MAX_POSSIBLE_LEGAL_MOVES = 218;
 
 constexpr int DEFAULT_SEARCH_DEPTH = 5;
+constexpr int DEFAULT_SEARCH_TIME_BUDGET = 5000;
+
+constexpr int ABORT_CHECK_PERIOD = 1024;
 
 constexpr int NUM_DIRECTIONS = 8;
 

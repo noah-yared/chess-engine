@@ -1,13 +1,14 @@
 #pragma once
 
+#include <array>
 #include <type_traits>
 #include <variant>
 
 #include "board/position.h"
 #include "move/move.h"
-#include "search/difficulty.h"
 #include "search/search_types.h"
 #include "search/searcher.h"
+#include "search/strength.h"
 #include "search/transposition_table.h"
 
 class EngineController
@@ -17,33 +18,28 @@ class EngineController
     explicit EngineController(const Position& position) : position_{position}, tt_{} {};
     explicit EngineController(const std::string& fen) : position_{fen}, tt_{} {};
 
+    SearchResult search(const SearchConfig& config)
+    {
+        return Searcher::search(position_, config, config.options.useTT ? &tt_ : nullptr);
+    }
+
+    // useful for quick tests
     SearchResult search(int depth = DEFAULT_SEARCH_DEPTH)
     {
-        SearchConfig config(depth);
-        return Searcher::search(position_, config, &tt_);
+        return search(SearchConfig::fixedDepth(depth));
     }
 
-    SearchResult search(Difficulty difficulty, int depth = DEFAULT_SEARCH_DEPTH)
+    MoveVariant playEngineMove(const SearchConfig& config)
     {
-        // TODO: add support for engine difficulty
-        (void)difficulty;
-
-        SearchConfig config(depth);
-        return Searcher::search(position_, config, &tt_);
-    }
-
-    MoveVariant playEngineMove(int depth = DEFAULT_SEARCH_DEPTH)
-    {
-        auto result = search(depth);
+        auto result = search(config);
         advance(result.bestMove);
         return result.bestMove;
     }
 
-    MoveVariant playEngineMove(Difficulty difficulty, int depth = DEFAULT_SEARCH_DEPTH)
+    MoveVariant playEngineMove(Strength strength)
     {
-        auto result = search(difficulty, depth);
-        advance(result.bestMove);
-        return result.bestMove;
+        return playEngineMove(
+            SearchConfig::fixedTime(computeTimeBudgetMS(strength), 999 /* infinite max depth */));
     }
 
     void advance(MoveVariant move) noexcept
@@ -61,4 +57,11 @@ class EngineController
   private:
     Position position_;
     TranspositionTable tt_;
+
+    [[nodiscard]] static int computeTimeBudgetMS(Strength strength)
+    {
+        std::array<int, static_cast<int>(Strength::NUM_LEVELS)> timeBudgetsMS = {500,  1000, 2000,
+                                                                                 4000, 8000, 10000};
+        return timeBudgetsMS[static_cast<int>(strength)];
+    }
 };
