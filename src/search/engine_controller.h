@@ -12,18 +12,19 @@
 #include "search/searcher.h"
 #include "search/strength.h"
 #include "search/transposition_table.h"
+#include "concurrency/thread_pool.h"
 
 class EngineController
 {
   public:
-    EngineController() noexcept : position_{}, tt_{} {};
-    explicit EngineController(const Position& position) : position_{position}, tt_{} {};
-    explicit EngineController(const std::string& fen) : position_{fen}, tt_{} {};
+    explicit EngineController(int numThreads = 1) : position_{}, tt_{}, threadPool_{numThreads} {};
+    explicit EngineController(const Position& position, int numThreads = 1) : position_{position}, tt_{}, threadPool_{numThreads} {};
+    explicit EngineController(const std::string& fen, int numThreads = 1) : position_{fen}, tt_{}, threadPool_{numThreads} {};
 
     // Precondition for search/playEngineMove: position_ has at least one legal move.
     SearchResult search(const SearchConfig& config)
     {
-        return Searcher::search(position_, config, config.options.useTT ? &tt_ : nullptr);
+        return Searcher::search(position_, config, config.options.useTT ? &tt_ : nullptr, &threadPool_);
     }
 
     // useful for quick tests
@@ -60,6 +61,7 @@ class EngineController
   private:
     Position position_;
     TranspositionTable tt_;
+    ThreadPool threadPool_;
 
     [[nodiscard]] static int computeTimeBudgetMS(Strength strength)
     {

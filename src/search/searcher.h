@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <optional>
+#include <vector>
 
 #include "board/constants.h"
 #include "board/position.h"
@@ -13,6 +14,8 @@
 #include "search/search_types.h"
 #include "search/state_stack.h"
 #include "search/transposition_table.h"
+#include "concurrency/thread_pool.h"
+#include "search/split_point.h"
 
 class Searcher
 {
@@ -21,21 +24,26 @@ class Searcher
     // - root has at least one legal move.
     // - config.limits.maxDepth >= 1.
     static SearchResult search(const Position& root, const SearchConfig& config,
-                               TranspositionTable* tt)
+                               TranspositionTable* tt, ThreadPool* threadPool = nullptr)
     {
-        // initialize search context
-        Context context(root, config, config.options.useTT ? tt : nullptr);
+        // initialize search contexts for each threadpool worker
+        const int n = threadPool != nullptr ? threadPool->numWorkers() : 1;
+        std::vector<Context> contexts;
+        contexts.reserve(n);
+        for (int i = 0; i < n; ++i) {
+            contexts.emplace_back(root, config, config.options.useTT ? tt : nullptr);
+        }
 
         // ensure valid max depth
-        assert(context.config->limits.maxDepth >= 1 && "maxDepth must be >= 1!");
+        assert(config.limits.maxDepth >= 1 && "maxDepth must be >= 1!");
 
         // apply iterative deepening
         std::optional<SearchResult> lastCompleted;
 
-        for (int depth = 1; depth <= context.config->limits.maxDepth; ++depth)
+        for (int depth = 1; depth <= config.limits.maxDepth; ++depth)
         {
-            auto newResult = root.isWhiteToMove() ? searchRoot<Color::WHITE>(root, context, depth)
-                                                  : searchRoot<Color::BLACK>(root, context, depth);
+            auto newResult = root.isWhiteToMove() ? searchRoot<Color::WHITE>(root, contexts, depth, threadPool)
+                                                  : searchRoot<Color::BLACK>(root, contexts, depth, threadPool);
             if (newResult.aborted)
                 break; // ran out of search time
 
@@ -197,9 +205,139 @@ class Searcher
                           getStep(bestMove));
     }
 
+    // `color` is the side to move at the parent node. Searches `move` and restores.
     template <Color color>
-    static NodeResult alphaBeta(Context& context, int alpha, int beta, int depthRemaining, int ply)
+    static NodeResult searchChild(std::vector<Context>& contexts, Context& context, MoveVariant move,
+                                  int alpha, int beta, int childDepth, int childPly,
+                                  ThreadPool* threadPool)
     {
+        advance(context, move);
+        auto result =
+            alphaBeta<opposite<color>()>(contexts, alpha, beta, childDepth, childPly, threadPool);
+        backtrack(context, move);
+        return result;
+    }
+
+    // Applies the score to the alpha/beta bounds and updates the best move index
+    // if the score is better than the current alpha/beta bounds.
+    // Returns true if a cutoff occurred.
+    template <Color color>
+    static bool applyLocalScore(int score, int& alpha, int& beta, int& bestMoveIndex,
+                                int moveIndex) noexcept
+    {
+        if constexpr (color == Color::WHITE)
+        {
+            if (score > alpha)
+            {
+                alpha = score;
+                bestMoveIndex = moveIndex;
+            }
+        }
+        else
+        {
+            if (score < beta)
+            {
+                beta = score;
+                bestMoveIndex = moveIndex;
+            }
+        }
+        return beta <= alpha;
+    }
+
+    template <Color color>
+    static void executeSplitMove(SplitPoint& splitPoint, std::vector<Context>& contexts,
+                                 int moveIndex, ThreadPool* threadPool)
+    {
+        SplitPendingGuard guard(splitPoint.pending);
+        if (splitShouldStop(splitPoint))
+            return;
+
+        const auto move = splitPoint.moves.moves[moveIndex].move;
+        Context& context = contexts[ThreadPool::workerId()];
+        Position saved = context.position;
+        context.position = splitPoint.position;
+
+        auto result = searchChild<color>(
+            contexts, context, move, splitPoint.alpha.load(std::memory_order_relaxed),
+            splitPoint.beta.load(std::memory_order_relaxed), splitPoint.depthRemaining - 1,
+            splitPoint.ply + 1, threadPool);
+
+        context.position = saved;
+
+        if (result.aborted)
+        {
+            splitPoint.aborted.store(true, std::memory_order_relaxed);
+            return;
+        }
+
+        applySplitScore<color>(splitPoint, result.score, moveIndex);
+    }
+
+    template <Color color>
+    static NodeResult searchYoungBrothersSerial(std::vector<Context>& contexts, Context& context,
+                                                const MoveOrdering::SortableMoveList& sortedMoves,
+                                                int& alpha, int& beta, int& bestMoveIndex,
+                                                int depthRemaining, int ply, ThreadPool* threadPool)
+    {
+        for (int i = 1; i < static_cast<int>(sortedMoves.count); ++i)
+        {
+            auto result =
+                searchChild<color>(contexts, context, sortedMoves.moves[i].move, alpha, beta,
+                                   depthRemaining - 1, ply + 1, threadPool);
+            if (result.aborted)
+                return result;
+            if (applyLocalScore<color>(result.score, alpha, beta, bestMoveIndex, i))
+                break;
+        }
+        return NodeResult{.score = color == Color::WHITE ? alpha : beta};
+    }
+
+    template <Color color>
+    static NodeResult searchYoungBrothersParallel(std::vector<Context>& contexts, Context& context,
+                                                  const MoveOrdering::SortableMoveList& sortedMoves,
+                                                  int& alpha, int& beta, int& bestMoveIndex,
+                                                  int depthRemaining, int ply,
+                                                  ThreadPool* threadPool)
+    {
+        constexpr bool isMaximizingPlayer = color == Color::WHITE;
+        SplitPoint splitPoint(context.position, sortedMoves, depthRemaining, ply, alpha, beta,
+                              isMaximizingPlayer ? alpha : beta, /*bestMoveIndex=*/0);
+
+        for (int moveIndex = 1; moveIndex < static_cast<int>(sortedMoves.count); ++moveIndex)
+        {
+            splitPoint.pending.fetch_add(1);
+            threadPool->submit(
+                [&splitPoint, &contexts, moveIndex, threadPool]
+                { executeSplitMove<color>(splitPoint, contexts, moveIndex, threadPool); });
+        }
+
+        while (splitPoint.pending.load() > 0)
+            threadPool->tryRunOne();
+
+        if (splitPoint.aborted.load(std::memory_order_relaxed))
+            return {.aborted = true};
+
+        const int bestScore = splitPoint.bestScore();
+        if constexpr (isMaximizingPlayer)
+        {
+            if (bestScore > alpha)
+                alpha = bestScore;
+        }
+        else
+        {
+            if (bestScore < beta)
+                beta = bestScore;
+        }
+        bestMoveIndex = splitPoint.bestMoveIndex();
+        return NodeResult{.score = isMaximizingPlayer ? alpha : beta};
+    }
+
+    template <Color color>
+    static NodeResult alphaBeta(std::vector<Context>& contexts, int alpha, int beta, int depthRemaining, int ply, ThreadPool* threadPool)
+    {
+        const int index = threadPool != nullptr ? ThreadPool::workerId() : 0;
+        auto& context = contexts[index];
+
         if (context.config->options.useTimeManagement && context.timer->isExpired())
         {
             return NodeResult{.aborted = true};
@@ -223,52 +361,46 @@ class Searcher
             return {.score = terminalScore<color>(context, ply)};
         }
 
-        MoveVariant currentBestMove = sortedMoves.moves[0].move;
+        int currentBestMoveIndex = 0;
         int originalAlpha = alpha, originalBeta = beta;
         constexpr bool isMaximizingPlayer = color == Color::WHITE;
 
-        for (int i = 0; i < sortedMoves.count; ++i)
+        auto result = searchChild<color>(contexts, context, sortedMoves.moves[0].move, alpha, beta,
+                                         depthRemaining - 1, ply + 1, threadPool);
+        if (result.aborted)
+            return result;
+
+        if (applyLocalScore<color>(result.score, alpha, beta, currentBestMoveIndex, 0))
         {
-            const auto move = sortedMoves.moves[i].move;
-
-            advance(context, move);
-            auto result =
-                alphaBeta<opposite<color>()>(context, alpha, beta, depthRemaining - 1, ply + 1);
-            backtrack(context, move);
-
-            if (result.aborted)
-            {
-                return result; // child search node aborted
-            }
-
-            int score = result.score;
             if constexpr (isMaximizingPlayer)
-            {
-                if (score > alpha)
-                {
-                    alpha = score;
-                    currentBestMove = move;
-                }
-            }
+                storeEvalIntoTT(context, alpha, depthRemaining, originalAlpha, originalBeta,
+                                sortedMoves.moves[0].move);
             else
-            {
-                if (score < beta)
-                {
-                    beta = score;
-                    currentBestMove = move;
-                }
-            }
+                storeEvalIntoTT(context, beta, depthRemaining, originalAlpha, originalBeta,
+                                sortedMoves.moves[0].move);
 
-            if (beta <= alpha)
-                break;
+            return NodeResult{.score = isMaximizingPlayer ? alpha : beta};
         }
+
+        const bool shouldSplit = threadPool != nullptr &&
+                                 canSplit(threadPool->numWorkers(), sortedMoves.count,
+                                          depthRemaining, false);
+
+        result = shouldSplit ? searchYoungBrothersParallel<color>(
+                                   contexts, context, sortedMoves, alpha, beta, currentBestMoveIndex,
+                                   depthRemaining, ply, threadPool)
+                             : searchYoungBrothersSerial<color>(
+                                   contexts, context, sortedMoves, alpha, beta, currentBestMoveIndex,
+                                   depthRemaining, ply, threadPool);
+        if (result.aborted)
+            return result;
 
         if constexpr (isMaximizingPlayer)
             storeEvalIntoTT(context, alpha, depthRemaining, originalAlpha, originalBeta,
-                            currentBestMove);
+                            sortedMoves.moves[currentBestMoveIndex].move);
         else
             storeEvalIntoTT(context, beta, depthRemaining, originalAlpha, originalBeta,
-                            currentBestMove);
+                            sortedMoves.moves[currentBestMoveIndex].move);
 
         return NodeResult{.score = isMaximizingPlayer ? alpha : beta};
     }
@@ -341,49 +473,56 @@ class Searcher
         return NodeResult{.score = bestValue};
     }
 
-    template <Color color>
-    static SearchResult searchRoot(const Position& root, Context& context, int depth)
+    static SearchStats accumulateStats(const std::vector<Context>& contexts) noexcept
     {
-        std::optional<MoveVariant> bestMove = std::nullopt;
-        int bestScore = root.isWhiteToMove() ? NEGINF : POSINF;
+        SearchStats total;
+        for (const auto& context : contexts)
+            total += context.stats;
+        return total;
+    }
+
+    template <Color color>
+    static SearchResult searchRoot(const Position&, std::vector<Context>& contexts, int depth,
+                                   ThreadPool* threadPool)
+    {
+        const int index = threadPool != nullptr ? ThreadPool::workerId() : 0;
+        auto& context = contexts[index];
 
         MoveOrdering::SortableMoveList sortedMoves;
         generateSortedMoves<color>(sortedMoves, context, Phase::ROOT);
+        assert(sortedMoves.count > 0 && "No move was found in searchRoot!");
 
-        for (int i = 0; i < sortedMoves.count; ++i)
+        int alpha = NEGINF;
+        int beta = POSINF;
+        int bestMoveIndex = 0;
+        const int ply = 0;
+
+        auto result = searchChild<color>(contexts, context, sortedMoves.moves[0].move, alpha, beta,
+                                         depth - 1, ply + 1, threadPool);
+        if (result.aborted)
+            return SearchResult{.aborted = true};
+
+        if (applyLocalScore<color>(result.score, alpha, beta, bestMoveIndex, 0))
         {
-            const auto move = sortedMoves.moves[i].move;
-
-            advance(context, move);
-            auto result = alphaBeta<opposite<color>()>(context, NEGINF, POSINF, depth - 1, 1);
-            backtrack(context, move);
-
-            if (result.aborted)
-            {
-                return SearchResult{.aborted = true};
-            }
-
-            int score = result.score;
-            if (root.isWhiteToMove())
-            {
-                if (score >= bestScore)
-                {
-                    bestScore = score;
-                    bestMove = move;
-                }
-            }
-            else
-            {
-                if (score <= bestScore)
-                {
-                    bestScore = score;
-                    bestMove = move;
-                }
-            }
+            return SearchResult{.bestMove = sortedMoves.moves[0].move,
+                                .score = color == Color::WHITE ? alpha : beta,
+                                .stats = accumulateStats(contexts)};
         }
 
-        assert(bestMove.has_value() && "No move was found in searchRoot!");
-        return SearchResult{
-            .bestMove = bestMove.value(), .score = bestScore, .stats = context.stats};
+        const bool shouldSplit = threadPool != nullptr &&
+                                 canSplit(threadPool->numWorkers(), sortedMoves.count, depth, false);
+
+        result = shouldSplit ? searchYoungBrothersParallel<color>(
+                                   contexts, context, sortedMoves, alpha, beta, bestMoveIndex,
+                                   depth, ply, threadPool)
+                             : searchYoungBrothersSerial<color>(
+                                   contexts, context, sortedMoves, alpha, beta, bestMoveIndex,
+                                   depth, ply, threadPool);
+        if (result.aborted)
+            return SearchResult{.aborted = true};
+
+        return SearchResult{.bestMove = sortedMoves.moves[bestMoveIndex].move,
+                            .score = color == Color::WHITE ? alpha : beta,
+                            .stats = accumulateStats(contexts)};
     }
 };

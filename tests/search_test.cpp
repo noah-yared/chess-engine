@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <array>
 #include <chrono>
 #include <string>
 
@@ -119,4 +120,52 @@ TEST_F(SearchTest, EngineControllerAppliesPlayedMove)
     std::visit([&expected](auto&& m) noexcept { expected.applyMove(m); }, move);
 
     EXPECT_EQ(controller.position(), expected);
+}
+
+TEST_F(SearchTest, MultiWorkerFixedDepthMatchesSingleWorkerScore)
+{
+    // Depth 4 is MIN_SPLIT_DEPTH, so root (and some interior nodes at 5) split.
+    constexpr int kWorkers = 4;
+    constexpr int kDepth = 5;
+    const std::array fens = {
+        std::string(STARTING_FEN),
+        std::string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"),
+        std::string("r6R/2pbpBk1/1P1B1N2/6q1/4Q3/2nn1p2/1PK1NbP1/R6r w - - 0 1"),
+    };
+    const auto config = SearchConfig::fixedDepth(kDepth).withoutTT();
+
+    for (const auto& fen : fens)
+    {
+        loadFen(fen);
+        const auto original = pos;
+        EngineController sequential(pos, 1);
+        EngineController parallel(pos, kWorkers);
+
+        const auto sequentialResult = sequential.search(config);
+        const auto parallelResult = parallel.search(config);
+
+        EXPECT_EQ(sequentialResult.score, parallelResult.score) << fen;
+        EXPECT_TRUE(isLegalMove(sequentialResult.bestMove)) << fen;
+        EXPECT_TRUE(isLegalMove(parallelResult.bestMove)) << fen;
+        EXPECT_GT(parallelResult.stats.nodesSearched, 0ULL) << fen;
+        EXPECT_EQ(pos, original) << fen;
+        EXPECT_EQ(sequential.position(), original) << fen;
+        EXPECT_EQ(parallel.position(), original) << fen;
+    }
+}
+
+TEST_F(SearchTest, MultiWorkerTimedSearchWithHighDepthStopsOnTime)
+{
+    loadStartingPosition();
+    EngineController engine(pos, 4);
+    auto config = SearchConfig::fixedTime(20, MAX_SEARCH_DEPTH);
+
+    const auto start = std::chrono::steady_clock::now();
+    auto result = engine.search(config);
+    const auto end = std::chrono::steady_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    EXPECT_TRUE(isLegalMove(result.bestMove));
+    EXPECT_GT(result.stats.nodesSearched, 0ULL);
+    EXPECT_LT(elapsed.count(), 250);
 }

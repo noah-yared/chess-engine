@@ -62,6 +62,14 @@ struct SearchStats
     u64 nodesSearched = 0ULL;
     u64 ttHits = 0ULL;
     u64 cutoffs = 0ULL;
+
+    SearchStats& operator+=(const SearchStats& other) noexcept
+    {
+        nodesSearched += other.nodesSearched;
+        ttHits += other.ttHits;
+        cutoffs += other.cutoffs;
+        return *this;
+    }
 };
 
 struct SearchResult
