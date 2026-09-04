@@ -29,6 +29,8 @@ constexpr int DEFAULT_SEARCH_TIME_BUDGET = 1000;
 
 constexpr int MIN_SEARCH_TIME_BUDGET = 20;
 
+constexpr int MIN_SEARCH_PARALLELISM = 1;
+
 constexpr int ABORT_CHECK_PERIOD = 1024;
 
 constexpr int NUM_DIRECTIONS = 8;

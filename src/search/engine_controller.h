@@ -43,9 +43,9 @@ class EngineController
         return result.bestMove;
     }
 
-    MoveVariant playEngineMove(Strength strength)
+    MoveVariant playEngineMove(Strength strength, int parallelism = 1)
     {
-        return playEngineMove(buildStrengthConfig(strength));
+        return playEngineMove(buildStrengthConfig(strength).setParallelism(parallelism));
     }
 
     void advance(MoveVariant move) noexcept
@@ -69,7 +69,7 @@ class EngineController
     // benches match the pre-YBWC path. Rebuild the pool if worker count changes.
     ThreadPool* threadPoolFor(const SearchConfig& config)
     {
-        const int workers = config.limits.parallelism;
+        const int workers = clampSearchParallelism(config.limits.parallelism);
         if (workers <= 1)
         {
             threadPool_.reset();

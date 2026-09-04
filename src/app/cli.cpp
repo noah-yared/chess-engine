@@ -419,6 +419,7 @@ int handleAppModeCommand(int argc, const char* argv[])
         return -1;
 
     EngineController engine;
+    int parallelism = 1;
 
     std::string line;
     while (std::getline(std::cin, line))
@@ -478,9 +479,25 @@ int handleAppModeCommand(int argc, const char* argv[])
                 return -1;
             }
 
-            auto move = engine.playEngineMove(Strength(strengthLevel));
+            auto move = engine.playEngineMove(Strength(strengthLevel), parallelism);
             std::cout << std::visit([](auto&& arg) { return arg.uci(); }, move) << '\n'
                       << std::endl;
+        }
+        else if (command == "set-parallelism")
+        { // set-parallelism,<workers>
+            if (tokens.size() != 2)
+            {
+                std::cout << "Invalid command: " << line << '\n';
+                return -1;
+            }
+
+            int workers = std::stoi(tokens[1]);
+            if (workers < MIN_SEARCH_PARALLELISM || workers > maxSearchParallelism())
+            {
+                std::cout << "Invalid parallelism: " << tokens[1] << '\n';
+                return -1;
+            }
+            parallelism = workers;
         }
         else if (command == "king-in-check")
         { // king-in-check[,<fen>]

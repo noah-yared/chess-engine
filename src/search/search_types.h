@@ -1,9 +1,22 @@
 #pragma once
 
 #include <algorithm>
+#include <thread>
 
 #include "board/constants.h"
 #include "move/move.h"
+
+// hardware_concurrency() may return 0 when the OS does not report a count.
+[[nodiscard]] inline int maxSearchParallelism() noexcept
+{
+    const unsigned hw = std::thread::hardware_concurrency();
+    return hw > 0 ? static_cast<int>(hw) : MIN_SEARCH_PARALLELISM;
+}
+
+[[nodiscard]] inline int clampSearchParallelism(int workers) noexcept
+{
+    return std::clamp(workers, MIN_SEARCH_PARALLELISM, maxSearchParallelism());
+}
 
 struct SearchConfig
 {
@@ -59,7 +72,7 @@ struct SearchConfig
 
     [[nodiscard]] SearchConfig& setParallelism(int workers)
     {
-        limits.parallelism = std::max(1, workers);
+        limits.parallelism = clampSearchParallelism(workers);
         return *this;
     }
 };
