@@ -12,6 +12,7 @@ struct SearchConfig
     {
         int maxDepth = DEFAULT_SEARCH_DEPTH;
         int timeLimitMS = DEFAULT_SEARCH_TIME_BUDGET;
+        int parallelism = 1;
     };
 
     struct SearchOptions
@@ -53,6 +54,12 @@ struct SearchConfig
     [[nodiscard]] SearchConfig& withoutQuiescence()
     {
         options.useQuiescence = false;
+        return *this;
+    }
+
+    [[nodiscard]] SearchConfig& setParallelism(int workers)
+    {
+        limits.parallelism = std::max(1, workers);
         return *this;
     }
 };

@@ -133,16 +133,17 @@ TEST_F(SearchTest, MultiWorkerFixedDepthMatchesSingleWorkerScore)
         std::string("r6R/2pbpBk1/1P1B1N2/6q1/4Q3/2nn1p2/1PK1NbP1/R6r w - - 0 1"),
     };
     const auto config = SearchConfig::fixedDepth(kDepth).withoutTT();
+    const auto parallelConfig = SearchConfig::fixedDepth(kDepth).withoutTT().setParallelism(kWorkers);
 
     for (const auto& fen : fens)
     {
         loadFen(fen);
         const auto original = pos;
-        EngineController sequential(pos, 1);
-        EngineController parallel(pos, kWorkers);
+        EngineController sequential(pos);
+        EngineController parallel(pos);
 
         const auto sequentialResult = sequential.search(config);
-        const auto parallelResult = parallel.search(config);
+        const auto parallelResult = parallel.search(parallelConfig);
 
         EXPECT_EQ(sequentialResult.score, parallelResult.score) << fen;
         EXPECT_TRUE(isLegalMove(sequentialResult.bestMove)) << fen;
@@ -157,8 +158,8 @@ TEST_F(SearchTest, MultiWorkerFixedDepthMatchesSingleWorkerScore)
 TEST_F(SearchTest, MultiWorkerTimedSearchWithHighDepthStopsOnTime)
 {
     loadStartingPosition();
-    EngineController engine(pos, 4);
-    auto config = SearchConfig::fixedTime(20, MAX_SEARCH_DEPTH);
+    EngineController engine(pos);
+    auto config = SearchConfig::fixedTime(20, MAX_SEARCH_DEPTH).setParallelism(4);
 
     const auto start = std::chrono::steady_clock::now();
     auto result = engine.search(config);

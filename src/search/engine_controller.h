@@ -3,31 +3,33 @@
 #include <array>
 #include <cassert>
 #include <cstdlib>
+#include <memory>
 #include <type_traits>
 #include <variant>
 
 #include "board/position.h"
+#include "concurrency/thread_pool.h"
 #include "move/move.h"
 #include "search/search_types.h"
 #include "search/searcher.h"
 #include "search/strength.h"
 #include "search/transposition_table.h"
-#include "concurrency/thread_pool.h"
 
 class EngineController
 {
   public:
-    explicit EngineController(int numThreads = 1) : position_{}, tt_{}, threadPool_{numThreads} {};
-    explicit EngineController(const Position& position, int numThreads = 1) : position_{position}, tt_{}, threadPool_{numThreads} {};
-    explicit EngineController(const std::string& fen, int numThreads = 1) : position_{fen}, tt_{}, threadPool_{numThreads} {};
+    EngineController() noexcept : position_{}, tt_{} {};
+    explicit EngineController(const Position& position) : position_{position}, tt_{} {};
+    explicit EngineController(const std::string& fen) : position_{fen}, tt_{} {};
 
     // Precondition for search/playEngineMove: position_ has at least one legal move.
     SearchResult search(const SearchConfig& config)
     {
-        return Searcher::search(position_, config, config.options.useTT ? &tt_ : nullptr, &threadPool_);
+        return Searcher::search(position_, config, config.options.useTT ? &tt_ : nullptr,
+                                threadPoolFor(config));
     }
 
-    // useful for quick tests
+    // Useful for quick tests.
     SearchResult search(int depth = DEFAULT_SEARCH_DEPTH)
     {
         return search(SearchConfig::fixedDepth(depth));
@@ -61,7 +63,22 @@ class EngineController
   private:
     Position position_;
     TranspositionTable tt_;
-    ThreadPool threadPool_;
+    std::unique_ptr<ThreadPool> threadPool_;
+
+    // Sequential search (parallelism == 1) does not attach a pool, so 1-thread
+    // benches match the pre-YBWC path. Rebuild the pool if worker count changes.
+    ThreadPool* threadPoolFor(const SearchConfig& config)
+    {
+        const int workers = config.limits.parallelism;
+        if (workers <= 1)
+        {
+            threadPool_.reset();
+            return nullptr;
+        }
+        if (!threadPool_ || threadPool_->numWorkers() != workers)
+            threadPool_ = std::make_unique<ThreadPool>(workers);
+        return threadPool_.get();
+    }
 
     [[nodiscard]] static int computeTimeBudgetMS(Strength strength)
     {
