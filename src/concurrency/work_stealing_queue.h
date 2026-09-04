@@ -10,8 +10,9 @@ using Task = std::function<void()>;
 class WorkStealingQueue
 {
   public:
-    explicit WorkStealingQueue(int initial_size = 0)
-        : active_buffer_(std::make_shared<CircularBuffer>(initial_size))
+    // `log_size` is the log2 of the initial circular capacity.
+    explicit WorkStealingQueue(int log_size = 8)
+        : active_buffer_(std::make_shared<CircularBuffer>(log_size))
     {
     }
 
@@ -48,12 +49,11 @@ class WorkStealingQueue
     {
         auto top = top_.load();
         auto bottom = bottom_.load();
-        // Atomically load shared_prt to active buffer to ensure no
+        // Atomically load shared_ptr to active buffer to ensure no
         // use-after-free when growing buffer.
         auto tasks = std::atomic_load(&active_buffer_);
         if (bottom - top <= 0)
         {
-            // Task queue is empty
             *task = nullptr;
             return true;
         }
@@ -67,7 +67,7 @@ class WorkStealingQueue
     void popBottom(Task** task)
     {
         auto bottom = bottom_.load();
-        // No synchronization since this only runs on owner
+        // No synchronization since this only runs on owner.
         auto tasks = active_buffer_;
         bottom = bottom - 1;
         bottom_.store(bottom);
@@ -84,12 +84,14 @@ class WorkStealingQueue
         {
             return;
         }
-        if (!top_.compare_exchange_strong(top, top + 1))
-        {
-            // Concurrent steal took task before it could be popped
+        // Last element: compete with steal. compare_exchange_strong writes the
+        // observed top into `top` on failure, so bottom must be restored from
+        // the pre-CAS index. Using the updated `top` skips a slot and later
+        // steal invokes an empty std::function (SIGABRT).
+        const auto taken = top;
+        if (!top_.compare_exchange_strong(top, taken + 1))
             *task = nullptr;
-        }
-        bottom_.store(top + 1);
+        bottom_.store(taken + 1);
     }
 
   private:

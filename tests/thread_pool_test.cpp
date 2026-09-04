@@ -154,3 +154,28 @@ TEST(ThreadPoolTest, DestructorDrainsQueuedTasks)
 
     EXPECT_EQ(completed.load(), kTaskCount);
 }
+
+// Owner and thief contend for the last queued task. Restoring bottom from a
+// CAS-updated top used to skip a slot and later invoke an empty std::function.
+TEST(ThreadPoolTest, LastElementStealDoesNotAbort)
+{
+    constexpr int kIters = 20000;
+    ThreadPool pool(2);
+    std::atomic<int> completed{0};
+    int expected = 0;
+
+    for (int i = 0; i < kIters; ++i)
+    {
+        const int batch = 1 + (i % 3);
+        expected += batch;
+        for (int t = 0; t < batch; ++t)
+            pool.submit([&completed] { completed.fetch_add(1); });
+
+        while (pool.tryRunOne())
+            ;
+        ASSERT_TRUE(waitUntil([&completed, expected] { return completed.load() >= expected; }))
+            << "completed " << completed.load() << " of " << expected;
+    }
+
+    EXPECT_EQ(completed.load(), expected);
+}
