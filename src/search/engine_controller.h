@@ -24,15 +24,14 @@ enum class StrengthLevel
 class EngineController
 {
   public:
-    EngineController() noexcept : position_{}, tt_{} {};
-    explicit EngineController(const Position& position) : position_{position}, tt_{} {};
-    explicit EngineController(const std::string& fen) : position_{fen}, tt_{} {};
+    EngineController() noexcept : position_{} {};
+    explicit EngineController(const Position& position) : position_{position} {};
+    explicit EngineController(const std::string& fen) : position_{fen} {};
 
     // Precondition for search/playEngineMove: position_ has at least one legal move.
     SearchResult search(const SearchConfig& config)
     {
-        return Searcher::search(position_, config, config.options.useTT ? &tt_ : nullptr,
-                                threadPoolFor(config));
+        return Searcher::search(position_, config, ttFor(config), threadPoolFor(config));
     }
 
     // Useful for quick tests.
@@ -64,8 +63,22 @@ class EngineController
 
   private:
     Position position_;
-    TranspositionTable tt_;
+    std::unique_ptr<TranspositionTable> tt_;
     std::unique_ptr<ThreadPool> threadPool_;
+
+    // The default table is ~12.6 MB and its occupied-bit pattern has to be
+    // written on construction, so controllers that never search with a table
+    // (perft, tests, LOW strength) should not pay for one. Released again on a
+    // no-TT search rather than held idle; entries are key-verified, so losing
+    // them only costs move-ordering quality on the next search.
+    TranspositionTable* ttFor(const SearchConfig& config)
+    {
+        if (config.options.useTT && !tt_)
+            tt_ = std::make_unique<TranspositionTable>();
+        else if (!config.options.useTT && tt_)
+            tt_.reset();
+        return tt_.get();
+    }
 
     // Sequential search (parallelism == 1) does not attach a pool, so 1-thread
     // benches match the pre-YBWC path. Rebuild the pool if worker count changes.
@@ -84,7 +97,8 @@ class EngineController
 
     [[nodiscard]] static int computeTimeBudgetMS(StrengthLevel strength)
     {
-        std::array<int, static_cast<int>(StrengthLevel::NUM_LEVELS)> timeBudgetsMS = {100, 1500, 8000};
+        std::array<int, static_cast<int>(StrengthLevel::NUM_LEVELS)> timeBudgetsMS = {100, 1500,
+                                                                                      8000};
         return timeBudgetsMS[static_cast<int>(strength)];
     }
 
