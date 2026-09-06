@@ -118,6 +118,52 @@ TEST_F(SearchTest, EngineControllerAppliesPlayedMove)
     EXPECT_EQ(controller.position(), expected);
 }
 
+// The table is probed only to seed move ordering, never to cut off a node on a
+// stored score, so it may change how long a fixed-depth search takes but never
+// what that search returns.
+TEST_F(SearchTest, TranspositionTableDoesNotChangeFixedDepthScore)
+{
+    const std::array fens = {
+        std::string(STARTING_FEN),
+        std::string("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq - 0 1"),
+        std::string("r6R/2pbpBk1/1P1B1N2/6q1/4Q3/2nn1p2/1PK1NbP1/R6r w - - 0 1"),
+    };
+
+    for (const auto& fen : fens)
+    {
+        loadFen(fen);
+        for (int depth = 1; depth <= 5; ++depth)
+        {
+            EngineController withTT(pos);
+            EngineController withoutTT(pos);
+
+            const auto ttResult = withTT.search(SearchConfig::fixedDepth(depth));
+            const auto reference = withoutTT.search(SearchConfig::fixedDepth(depth).withoutTT());
+
+            EXPECT_EQ(ttResult.score, reference.score) << fen << " at depth " << depth;
+            EXPECT_TRUE(isLegalMove(ttResult.bestMove)) << fen << " at depth " << depth;
+        }
+    }
+}
+
+// Ordering the previous iteration's best move first is the entire benefit the
+// table buys, and it only shows up once iterative deepening has a few plies of
+// entries to reuse.
+TEST_F(SearchTest, TranspositionTableReducesNodesSearched)
+{
+    loadStartingPosition();
+    constexpr int kDepth = 6;
+
+    EngineController withTT(pos);
+    EngineController withoutTT(pos);
+
+    const auto ttResult = withTT.search(SearchConfig::fixedDepth(kDepth));
+    const auto reference = withoutTT.search(SearchConfig::fixedDepth(kDepth).withoutTT());
+
+    EXPECT_EQ(ttResult.score, reference.score);
+    EXPECT_LT(ttResult.stats.nodesSearched, reference.stats.nodesSearched);
+}
+
 TEST_F(SearchTest, MultiWorkerFixedDepthMatchesSingleWorkerScore)
 {
     // Depth 4 is MIN_SPLIT_DEPTH, so root (and some interior nodes at 5) split.
