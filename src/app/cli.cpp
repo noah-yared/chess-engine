@@ -13,7 +13,6 @@
 #include <sstream>
 #include <string>
 #include <system_error>
-#include <variant>
 
 // helper function
 std::string trimWhitespace(const std::string& str)
@@ -201,8 +200,7 @@ void simulateSelfPlay(const SelfPlayArgs& args, const char* exePath)
         auto move = result.bestMove;
         nodesSearched += result.stats.nodesSearched;
         engine.advance(move);
-        os << "Move #" << moveNumber << ": "
-           << std::visit([](auto&& arg) { return arg.uci(); }, move) << '\n';
+        os << "Move #" << moveNumber << ": " << move.uci() << '\n';
         os << engine.position() << '\n';
     }
     auto end = std::chrono::high_resolution_clock::now();
@@ -232,7 +230,7 @@ void printBestMove(const std::string& fen, int depth)
 {
     EngineController engine(fen);
     auto result = engine.search(depth);
-    std::cout << std::visit([](auto&& arg) { return arg.uci(); }, result.bestMove) << '\n';
+    std::cout << result.bestMove.uci() << '\n';
 }
 
 MakeMoveArgs parseMakeMoveArgs(int argc, const char* argv[])
@@ -479,8 +477,7 @@ int handleAppModeCommand(int argc, const char* argv[])
             }
 
             auto move = engine.playEngineMove(StrengthLevel(strengthLevel), parallelism);
-            std::cout << std::visit([](auto&& arg) { return arg.uci(); }, move) << '\n'
-                      << std::endl;
+            std::cout << move.uci() << '\n' << std::endl;
         }
         else if (command == "set-parallelism")
         { // set-parallelism,<workers>

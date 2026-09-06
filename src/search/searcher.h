@@ -121,23 +121,15 @@ class Searcher
         }
     };
 
-    static void advance(Context& context, MoveVariant variant) noexcept
+    static void advance(Context& context, Move move) noexcept
     {
         context.undoStack.push(context.position.getStateSnapshot());
-        std::visit([&context](auto&& move) noexcept
-                   { context.position.applyMove<std::decay_t<decltype(move)>::type>(move); },
-                   variant);
+        context.position.applyMove(move);
     }
 
-    static void backtrack(Context& context, MoveVariant variant) noexcept
+    static void backtrack(Context& context, Move move) noexcept
     {
-        std::visit(
-            [&context](auto&& move) noexcept
-            {
-                context.position.undoMove<std::decay_t<decltype(move)>::type>(
-                    move, context.undoStack.pop());
-            },
-            variant);
+        context.position.undoMove(move, context.undoStack.pop());
     }
 
     template <Color color>
@@ -180,10 +172,9 @@ class Searcher
         }
     }
 
-    [[nodiscard]] static std::pair<int, int> getStep(MoveVariant move) noexcept
+    [[nodiscard]] static std::pair<int, int> getStep(Move move) noexcept
     {
-        return std::visit([](auto&& move) noexcept -> std::pair<int, int>
-                          { return {move.start(), move.end()}; }, move);
+        return {move.start(), move.end()};
     }
 
     [[nodiscard]] static Bound getBound(int score, int alpha, int beta) noexcept
@@ -196,7 +187,7 @@ class Searcher
     }
 
     static void storeEvalIntoTT(Context& context, int score, int depth, int alpha, int beta,
-                                MoveVariant bestMove)
+                                Move bestMove)
     {
         if (context.tt == nullptr)
             return;
@@ -207,7 +198,7 @@ class Searcher
 
     // `color` is the side to move at the parent node. Searches `move` and restores.
     template <Color color>
-    static NodeResult searchChild(std::vector<Context>& contexts, Context& context, MoveVariant move,
+    static NodeResult searchChild(std::vector<Context>& contexts, Context& context, Move move,
                                   int alpha, int beta, int childDepth, int childPly,
                                   ThreadPool* threadPool)
     {

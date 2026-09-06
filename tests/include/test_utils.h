@@ -13,12 +13,6 @@ class ChessTestFixture : public ::testing::Test
     mutable MoveList moveBuffer_;
 
   protected:
-    using Normal = Move<MoveType::Normal>;
-    using DoublePush = Move<MoveType::DoublePawnPush>;
-    using Enpassant = Move<MoveType::Enpassant>;
-    using Promotion = Move<MoveType::Promotion>;
-    using Castle = Move<MoveType::Castle>;
-
     Position pos;
 
     void loadStartingPosition() { pos = Position::fromStartingPosition(); }
@@ -32,27 +26,28 @@ class ChessTestFixture : public ::testing::Test
         return moveBuffer_;
     }
 
-    [[nodiscard]] Normal normal(Square from, Square to) const
+    [[nodiscard]] Move normal(Square from, Square to) const
     {
         return MoveFactory::createMove<MoveType::Normal>(pos, from, to);
     }
 
-    [[nodiscard]] Promotion promotion(Square from, Square to) const
+    [[nodiscard]] Move promotion(Square from, Square to,
+                                 PieceType promotionPiece = PieceType::QUEEN) const
     {
-        return MoveFactory::createMove<MoveType::Promotion>(pos, from, to);
+        return MoveFactory::createMove<MoveType::Promotion>(pos, from, to, promotionPiece);
     }
 
-    [[nodiscard]] Enpassant enpassant(Square from, Square to) const
+    [[nodiscard]] Move enpassant(Square from, Square to) const
     {
         return MoveFactory::createMove<MoveType::Enpassant>(pos, from, to);
     }
 
-    [[nodiscard]] DoublePush doublePush(Square from, Square to) const
+    [[nodiscard]] Move doublePush(Square from, Square to) const
     {
         return MoveFactory::createMove<MoveType::DoublePawnPush>(pos, from, to);
     }
 
-    [[nodiscard]] Castle castle(Square from, Square to) const
+    [[nodiscard]] Move castle(Square from, Square to) const
     {
         return MoveFactory::createMove<MoveType::Castle>(pos, from, to);
     }

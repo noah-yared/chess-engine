@@ -110,7 +110,7 @@ class MoveGenerator
     // Move Validation     //
     /////////////////////////
     template <MoveType mType, Color color>
-    static bool isMoveLegal(const Position& pos, const Move<mType> move) noexcept
+    static bool isMoveLegal(const Position& pos, const Move move) noexcept
     {
         if constexpr (mType == MoveType::Castle)
         {
@@ -129,7 +129,7 @@ class MoveGenerator
         else
         {
             auto tmp = pos;
-            tmp.applyMove(move);
+            tmp.applyMove<mType>(move);
             return !isKingInCheck<color>(tmp);
         }
     }
@@ -146,8 +146,7 @@ class MoveGenerator
     // Move Operations      //
     //////////////////////////
     template <MoveType mType, Color color>
-    static bool pushIfLegal(const Position& pos, Move<mType> candidateMove,
-                            MoveList& moves) noexcept
+    static bool pushIfLegal(const Position& pos, Move candidateMove, MoveList& moves) noexcept
     {
         if (!isMoveLegal<mType, color>(pos, candidateMove))
             return false;

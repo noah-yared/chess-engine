@@ -12,7 +12,6 @@
 #include <sstream>
 #include <string>
 #include <system_error>
-#include <variant>
 
 namespace cli
 {
@@ -40,9 +39,9 @@ u64 perft(Position& pos, int depth)
     for (auto& move : moves)
     {
         auto snapshot = pos.getStateSnapshot();
-        std::visit([&](auto&& arg) { pos.applyMove(arg); }, move);
+        pos.applyMove(move);
         nodeCount += perft<opposite<color>()>(pos, depth - 1);
-        std::visit([&](auto&& arg) { pos.undoMove(arg, snapshot); }, move);
+        pos.undoMove(move, snapshot);
     }
     return nodeCount;
 }

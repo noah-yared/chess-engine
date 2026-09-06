@@ -15,7 +15,7 @@ static void BM_CopyPosition(benchmark::State& state)
         {
             auto tmp = pos;
             auto move = ml[i % ml.size()];
-            std::visit([&](auto&& arg) { tmp.applyMove(arg); }, move);
+            tmp.applyMove(move);
             int eval = tmp.evaluation();
             benchmark::DoNotOptimize(tmp);
             benchmark::DoNotOptimize(eval);
@@ -37,9 +37,9 @@ static void BM_ModifyPositionInPlace(benchmark::State& state)
         for (long long i = 0; i < N; ++i)
         {
             auto move = ml[i % ml.size()];
-            std::visit([&](auto&& arg) { pos.applyMove(arg); }, move);
+            pos.applyMove(move);
             int eval = pos.evaluation();
-            std::visit([&](auto&& arg) { pos.undoMove(arg, pos.getStateSnapshot()); }, move);
+            pos.undoMove(move, pos.getStateSnapshot());
             benchmark::DoNotOptimize(eval);
             benchmark::ClobberMemory();
         }

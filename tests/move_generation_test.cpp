@@ -30,11 +30,11 @@ class MoveGenerationTest : public ChessTestFixture
   private:
     [[nodiscard]] static std::string diff(const MoveList& actual, const MoveList& expected)
     {
-        std::unordered_set<MoveVariant> actualSet(actual.begin(), actual.end()),
+        std::unordered_set<Move> actualSet(actual.begin(), actual.end()),
             expectedSet(expected.begin(), expected.end());
 
         // compute set differences
-        std::unordered_set<MoveVariant> extraneous, missing;
+        std::unordered_set<Move> extraneous, missing;
         std::copy_if(actualSet.begin(), actualSet.end(),
                      std::inserter(extraneous, extraneous.begin()),
                      [&](const auto& item) { return !expectedSet.count(item); });
@@ -46,10 +46,10 @@ class MoveGenerationTest : public ChessTestFixture
         // '-' indicates extraneous moves in actual but not in expected
         std::stringstream ss;
         ss << "diff:\n";
-        for (const auto& move : extraneous)
-            std::visit([&ss](auto&& arg) { ss << '-' << arg.uci() << '\n'; }, move);
-        for (const auto& move : missing)
-            std::visit([&ss](auto&& arg) { ss << '+' << arg.uci() << '\n'; }, move);
+        for (const Move move : extraneous)
+            ss << '-' << move.uci() << '\n';
+        for (const Move move : missing)
+            ss << '+' << move.uci() << '\n';
         return ss.str();
     }
 };

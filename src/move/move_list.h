@@ -2,8 +2,8 @@
 
 #include <algorithm>
 #include <array>
+#include <optional>
 #include <unordered_set>
-#include <variant>
 
 #include "board/constants.h"
 #include "move/move.h"
@@ -14,7 +14,7 @@ struct MoveList
     friend std::ostream& operator<<(std::ostream& os, const MoveList& ml) noexcept;
 
   private:
-    std::array<MoveVariant, MAX_POSSIBLE_LEGAL_MOVES> moveBuffer_{};
+    std::array<Move, MAX_POSSIBLE_LEGAL_MOVES> moveBuffer_{};
     size_t sz_ = 0;
 
   public:
@@ -32,24 +32,23 @@ struct MoveList
     // Observers
     [[nodiscard]] size_t size() const noexcept { return sz_; }
     [[nodiscard]] bool isEmpty() const noexcept { return sz_ == 0; }
-    [[nodiscard]] const MoveVariant& operator[](size_t i) const noexcept { return moveBuffer_[i]; }
+    [[nodiscard]] Move operator[](size_t i) const noexcept { return moveBuffer_[i]; }
 
     // search methods
-    [[nodiscard]] std::optional<MoveVariant>
-    findMove(const std::pair<int, int> step) const noexcept;
-    [[nodiscard]] bool contains(const MoveVariant& move) const noexcept;
+    [[nodiscard]] std::optional<Move> findMove(const std::pair<int, int> step) const noexcept;
+    [[nodiscard]] bool contains(const Move move) const noexcept;
     [[nodiscard]] bool contains(const std::string& uci) const noexcept;
 
     // mutators
     void clear() noexcept { sz_ = 0; }
-    MoveVariant& pop() noexcept { return moveBuffer_[--sz_]; }
-    void push(const MoveVariant& move) noexcept { moveBuffer_[sz_++] = move; }
+    Move& pop() noexcept { return moveBuffer_[--sz_]; }
+    void push(const Move move) noexcept { moveBuffer_[sz_++] = move; }
 
     // iterator interface
-    [[nodiscard]] MoveVariant* begin() noexcept { return moveBuffer_.data(); }
-    [[nodiscard]] MoveVariant* end() noexcept { return moveBuffer_.data() + sz_; }
-    [[nodiscard]] const MoveVariant* begin() const noexcept { return moveBuffer_.data(); }
-    [[nodiscard]] const MoveVariant* end() const noexcept { return moveBuffer_.data() + sz_; }
+    [[nodiscard]] Move* begin() noexcept { return moveBuffer_.data(); }
+    [[nodiscard]] Move* end() noexcept { return moveBuffer_.data() + sz_; }
+    [[nodiscard]] const Move* begin() const noexcept { return moveBuffer_.data(); }
+    [[nodiscard]] const Move* end() const noexcept { return moveBuffer_.data() + sz_; }
 
     // sorting
     template <typename CompFunc>

@@ -5,16 +5,16 @@
 #include "move/move.h"
 
 template <MoveType mType>
-inline void updateEnpassantSquare(const Move<mType> move, BoardState& state) noexcept
+inline void updateEnpassantSquare(const Move move, BoardState& state) noexcept
 {
     if constexpr (mType == MoveType::DoublePawnPush)
-        state.setEnpassantSquare(move.enpassantSquare());
+        state.setEnpassantSquare(move.enpassantTargetSquare());
     else
         state.setEnpassantSquare(std::nullopt);
 }
 
 template <MoveType mType>
-inline void updateCastlingPrivs(const Move<mType> move, BoardState& state) noexcept
+inline void updateCastlingPrivs(const Move move, BoardState& state) noexcept
 {
     if constexpr (mType == MoveType::Castle)
     {
@@ -57,7 +57,7 @@ inline void updateCastlingPrivs(const Move<mType> move, BoardState& state) noexc
 }
 
 template <MoveType mType>
-inline void updateTurn(const Move<mType> move, BoardState& state) noexcept
+inline void updateTurn(const Move move, BoardState& state) noexcept
 {
     state.updateTurn();
 }

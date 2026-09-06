@@ -69,31 +69,29 @@ bool always_false = false;
 namespace move_delta_detail
 {
 
-template <MoveType mType>
-[[nodiscard]] inline int movedKey(const Move<mType> move) noexcept
+[[nodiscard]] inline int movedKey(const Move move) noexcept
 {
     return Bitboards::pieceToKey(move.moved(), move.side());
 }
 
-template <MoveType mType>
-[[nodiscard]] inline std::optional<int> capturedKey(const Move<mType> move) noexcept
+[[nodiscard]] inline std::optional<int> capturedKey(const Move move) noexcept
 {
     return move.captured() != PieceType::NONE
                ? std::optional<int>(Bitboards::pieceToKey(move.captured(), move.oppSide()))
                : std::nullopt;
 }
 
-[[nodiscard]] inline int promotionKey(const Move<MoveType::Promotion> move) noexcept
+[[nodiscard]] inline int promotionKey(const Move move) noexcept
 {
     return Bitboards::pieceToKey(move.promotionPiece(), move.side());
 }
 
-[[nodiscard]] inline int castledRookKey(const Move<MoveType::Castle> move) noexcept
+[[nodiscard]] inline int castledRookKey(const Move move) noexcept
 {
     return Bitboards::pieceToKey(PieceType::ROOK, move.side());
 }
 
-[[nodiscard]] inline int enpassantCaptureKey(const Move<MoveType::Enpassant> move) noexcept
+[[nodiscard]] inline int enpassantCaptureKey(const Move move) noexcept
 {
     return Bitboards::pieceToKey(PieceType::PAWN, move.oppSide());
 }
@@ -104,7 +102,7 @@ template <MoveType mType>
 struct PieceSquareDeltas
 {
     using MoveDeltasList = DeltasContainerType<mType>;
-    static MoveDeltasList generate(const Move<mType> move) noexcept
+    static MoveDeltasList generate(const Move move) noexcept
     {
         static_assert(always_false<mType>, "Invalid move type");
     }
@@ -114,7 +112,7 @@ template <>
 struct PieceSquareDeltas<MoveType::Normal>
 {
     using MoveDeltasList = DeltasContainerType<MoveType::Normal>;
-    static MoveDeltasList generate(const Move<MoveType::Normal> move) noexcept
+    static MoveDeltasList generate(const Move move) noexcept
     {
         MoveDeltasList deltas = {
             Delta::Remove(move_delta_detail::movedKey(move), move.start()),
@@ -130,12 +128,13 @@ template <>
 struct PieceSquareDeltas<MoveType::Enpassant>
 {
     using MoveDeltasList = DeltasContainerType<MoveType::Enpassant>;
-    static MoveDeltasList generate(const Move<MoveType::Enpassant> move)
+    static MoveDeltasList generate(const Move move)
     {
         return {
             Delta::Remove(move_delta_detail::movedKey(move), move.start()),
             Delta::Place(move_delta_detail::movedKey(move), move.end()),
-            Delta::Remove(move_delta_detail::enpassantCaptureKey(move), move.enpassantSquare()),
+            Delta::Remove(move_delta_detail::enpassantCaptureKey(move),
+                          move.enpassantCaptureSquare()),
         };
     }
 };
@@ -144,7 +143,7 @@ template <>
 struct PieceSquareDeltas<MoveType::Promotion>
 {
     using MoveDeltasList = DeltasContainerType<MoveType::Promotion>;
-    static MoveDeltasList generate(const Move<MoveType::Promotion> move) noexcept
+    static MoveDeltasList generate(const Move move) noexcept
     {
         MoveDeltasList deltas = {
             Delta::Remove(move_delta_detail::movedKey(move), move.start()),
@@ -160,7 +159,7 @@ template <>
 struct PieceSquareDeltas<MoveType::Castle>
 {
     using MoveDeltasList = DeltasContainerType<MoveType::Castle>;
-    static MoveDeltasList generate(const Move<MoveType::Castle> move) noexcept
+    static MoveDeltasList generate(const Move move) noexcept
     {
         return {
             Delta::Remove(move_delta_detail::movedKey(move), move.start()),
@@ -175,7 +174,7 @@ template <>
 struct PieceSquareDeltas<MoveType::DoublePawnPush>
 {
     using MoveDeltasList = DeltasContainerType<MoveType::DoublePawnPush>;
-    static MoveDeltasList generate(const Move<MoveType::DoublePawnPush> move) noexcept
+    static MoveDeltasList generate(const Move move) noexcept
     {
         return {
             Delta::Remove(move_delta_detail::movedKey(move), move.start()),

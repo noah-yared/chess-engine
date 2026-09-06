@@ -14,10 +14,7 @@
 class SearchTest : public ChessTestFixture
 {
   protected:
-    [[nodiscard]] bool isLegalMove(const MoveVariant& move) const
-    {
-        return legalMoves().contains(move);
-    }
+    [[nodiscard]] bool isLegalMove(const Move move) const { return legalMoves().contains(move); }
 };
 
 TEST_F(SearchTest, SearcherReturnsLegalMoveForStartingPosition)
@@ -116,7 +113,7 @@ TEST_F(SearchTest, EngineControllerAppliesPlayedMove)
     Position expected = Position::fromStartingPosition();
 
     auto move = controller.playEngineMove(SearchConfig::fixedDepth(1));
-    std::visit([&expected](auto&& m) noexcept { expected.applyMove(m); }, move);
+    expected.applyMove(move);
 
     EXPECT_EQ(controller.position(), expected);
 }

@@ -74,8 +74,11 @@ class Position
     /////////////////////////
     // Move Operations     //
     /////////////////////////
+    // Callers that already know the move type at compile time (move generation's
+    // legality check, the search's own dispatch) should name it explicitly and
+    // skip the switch below.
     template <MoveType mType>
-    void applyMove(const Move<mType> move) noexcept
+    void applyMove(const Move move) noexcept
     {
         const auto deltas = PieceSquareDeltas<mType>::generate(move);
         updateBitboards<mType>(move, deltas);
@@ -85,11 +88,45 @@ class Position
     }
 
     template <MoveType mType>
-    void undoMove(const Move<mType> move, const BoardStateSnapshot previousSnapshot) noexcept
+    void undoMove(const Move move, const BoardStateSnapshot previousSnapshot) noexcept
     {
-        revertBitboards(move);
+        revertBitboards<mType>(move);
         auto [prevState, prevHash] = previousSnapshot;
         state_.revert(prevState), hash_ = prevHash;
+    }
+
+    void applyMove(const Move move) noexcept
+    {
+        switch (move.type())
+        {
+        case MoveType::Normal:
+            return applyMove<MoveType::Normal>(move);
+        case MoveType::Enpassant:
+            return applyMove<MoveType::Enpassant>(move);
+        case MoveType::Promotion:
+            return applyMove<MoveType::Promotion>(move);
+        case MoveType::Castle:
+            return applyMove<MoveType::Castle>(move);
+        case MoveType::DoublePawnPush:
+            return applyMove<MoveType::DoublePawnPush>(move);
+        }
+    }
+
+    void undoMove(const Move move, const BoardStateSnapshot previousSnapshot) noexcept
+    {
+        switch (move.type())
+        {
+        case MoveType::Normal:
+            return undoMove<MoveType::Normal>(move, previousSnapshot);
+        case MoveType::Enpassant:
+            return undoMove<MoveType::Enpassant>(move, previousSnapshot);
+        case MoveType::Promotion:
+            return undoMove<MoveType::Promotion>(move, previousSnapshot);
+        case MoveType::Castle:
+            return undoMove<MoveType::Castle>(move, previousSnapshot);
+        case MoveType::DoublePawnPush:
+            return undoMove<MoveType::DoublePawnPush>(move, previousSnapshot);
+        }
     }
 
     /////////////////////////
@@ -242,21 +279,21 @@ class Position
     // State Updates       //
     /////////////////////////
     template <MoveType mType, typename Container>
-    void updateBitboards(const Move<mType> move, const Container& deltas) noexcept
+    void updateBitboards(const Move move, const Container& deltas) noexcept
     {
         for (const auto [key, square] : deltas)
             bitboards_.togglePieceSquare(key, square);
     }
 
     template <MoveType mType>
-    void revertBitboards(const Move<mType> move) noexcept
+    void revertBitboards(const Move move) noexcept
     {
         for (const auto [key, square] : PieceSquareDeltas<mType>::generate(move))
             bitboards_.togglePieceSquare(key, square);
     }
 
     template <MoveType mType>
-    void updateState(const Move<mType> move) noexcept
+    void updateState(const Move move) noexcept
     {
         updateEnpassantSquare<mType>(move, state_);
         updateCastlingPrivs<mType>(move, state_);
@@ -264,7 +301,7 @@ class Position
     }
 
     template <MoveType mType, typename Container>
-    void updateHash(const Move<mType> move, const Container& deltas, const BoardState prevState,
+    void updateHash(const Move move, const Container& deltas, const BoardState prevState,
                     const BoardState newState) noexcept
     {
         hash_ ^= ZobristHasher<RNG>::getHashUpdateMask<mType>(

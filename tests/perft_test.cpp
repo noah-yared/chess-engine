@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <variant>
-
 #include "board/position.h"
 #include "move/move_generator.h"
 #include "move/move_list.h"
@@ -17,19 +15,19 @@ class PerftTest : public ChessTestFixture
 
         u64 total = 0;
         auto posCopy = pos; // backup position
-        for (const auto& move : legalMoves())
+        for (const Move move : legalMoves())
         {
             // save snapshot before applying move
             auto snapshot = pos.getStateSnapshot();
 
-            std::visit([&](auto&& m) { pos.applyMove(m); }, move);
+            pos.applyMove(move);
             total += perft(depth - 1);
-            std::visit([&](auto&& m) { pos.undoMove(m, snapshot); }, move);
+            pos.undoMove(move, snapshot);
 
             // verify position is restored
             EXPECT_EQ(posCopy, pos)
                 << "Position did not return to original state after applying & undoing move "
-                << "\"" << std::visit([&](auto&& m) { return m.uci(); }, move) << "\""
+                << "\"" << move.uci() << "\""
                 << " on \"" << posCopy.toFen() << "\"\n";
         }
         return total;

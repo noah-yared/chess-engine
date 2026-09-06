@@ -5,7 +5,6 @@
 #include <cstdlib>
 #include <memory>
 #include <type_traits>
-#include <variant>
 
 #include "board/position.h"
 #include "concurrency/thread_pool.h"
@@ -43,23 +42,19 @@ class EngineController
     }
 
     // Same precondition as search().
-    MoveVariant playEngineMove(const SearchConfig& config)
+    Move playEngineMove(const SearchConfig& config)
     {
         auto result = search(config);
         advance(result.bestMove);
         return result.bestMove;
     }
 
-    MoveVariant playEngineMove(StrengthLevel strength, int parallelism = 1)
+    Move playEngineMove(StrengthLevel strength, int parallelism = 1)
     {
         return playEngineMove(buildStrengthConfig(strength).setParallelism(parallelism));
     }
 
-    void advance(MoveVariant move) noexcept
-    {
-        std::visit([this](auto&& arg) noexcept
-                   { position_.applyMove<std::decay_t<decltype(arg)>::type>(arg); }, move);
-    }
+    void advance(Move move) noexcept { position_.applyMove(move); }
 
     void setPosition(const std::string& fen) noexcept { position_ = Position(fen); }
     void setPosition(const Position& position) noexcept { position_ = position; }

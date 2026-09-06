@@ -50,7 +50,7 @@ class ZobristHasher
     }
 
     template <MoveType mType, typename Container>
-    static u64 getHashUpdateMask(const Move<mType> move, const Container& deltas,
+    static u64 getHashUpdateMask(const Move move, const Container& deltas,
                                  const std::optional<int> maybePreviousEnpassantSq,
                                  int oldCastlingBits, int newCastlingBits) noexcept
     {
@@ -72,7 +72,7 @@ class ZobristHasher
     }
 
     template <MoveType mType>
-    static inline u64 enpassantSquareMask(const Move<mType> move,
+    static inline u64 enpassantSquareMask(const Move move,
                                           std::optional<int> maybePreviousEnpassantSq) noexcept
     {
         if constexpr (mType == MoveType::DoublePawnPush)
@@ -80,7 +80,7 @@ class ZobristHasher
             return (maybePreviousEnpassantSq
                         ? zobrist_.enpassantKeys[*maybePreviousEnpassantSq % RANKS]
                         : 0ULL) xor
-                   zobrist_.enpassantKeys[((move.start() + move.end()) / 2) % RANKS];
+                   zobrist_.enpassantKeys[move.enpassantTargetSquare() % RANKS];
         }
         else
         {

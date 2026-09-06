@@ -94,7 +94,7 @@ struct SearchStats
 
 struct SearchResult
 {
-    MoveVariant bestMove;
+    Move bestMove;
     int score = 0;
     bool aborted = false;
     SearchStats stats;

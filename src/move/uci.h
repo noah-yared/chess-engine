@@ -11,7 +11,7 @@
 #include "move/move_utils.h"
 
 // Uses the current state of pos to infer move type and captured piece.
-[[nodiscard]] inline MoveVariant uciToMove(const std::string& uci, const Position& pos) noexcept
+[[nodiscard]] inline Move uciToMove(const std::string& uci, const Position& pos) noexcept
 {
     constexpr auto normal = MoveType::Normal;
     constexpr auto promotion = MoveType::Promotion;
@@ -23,7 +23,7 @@
         to = algebraicNotationToIndex(uci.substr(2, 2));
     auto movedPiece = pos.getPieceOccupyingSquare(from);
     if (uci.size() == 5)
-        return MoveFactory::createMove<promotion>(pos, from, to);
+        return MoveFactory::createMove<promotion>(pos, from, to, charToPromotionPiece(uci[4]));
     if (auto maybeEnpassantSq = pos.maybeEnpassantSquare();
         maybeEnpassantSq && (to == *maybeEnpassantSq) && (movedPiece == PieceType::PAWN))
         return MoveFactory::createMove<enpassant>(pos, from, to);
