@@ -165,12 +165,14 @@ struct FieldData
 
 } // namespace detail
 
+// Entry i has the low i bits set, so indexing by a field width masks exactly
+// that field. Index 0 is empty and index N is the full width.
 template <std::integral T, int N, size_t... Is>
     requires std::is_unsigned_v<T>
-static constexpr std::array<T, N> generateLowerMasks(std::index_sequence<Is...>) noexcept
+static constexpr std::array<T, N + 1> generateLowerMasks(std::index_sequence<Is...>) noexcept
 {
-    T fullMask = std::numeric_limits<T>::max();
-    return {static_cast<T>(fullMask >> (N - Is - 1))...};
+    constexpr T fullMask = std::numeric_limits<T>::max();
+    return {static_cast<T>(Is == 0 ? T{0} : fullMask >> (N - Is))...};
 }
 
 template <std::integral T, int N = (sizeof(T) * 8), int M = N>
@@ -190,15 +192,19 @@ static constexpr std::array<std::array<T, N>, N> subMasks() noexcept
 }
 
 template <std::integral T, int N = (sizeof(T) * 8)>
-static constexpr std::array<T, N> lowMasks() noexcept
+static constexpr std::array<T, N + 1> lowMasks() noexcept
 {
-    return generateLowerMasks<T, N>(std::make_index_sequence<N>{});
+    return generateLowerMasks<T, N>(std::make_index_sequence<N + 1>{});
 }
 
 // Bitfield utilities
 constexpr int BYTE_SIZE = 8;
 constexpr auto U64_MASKS = lowMasks<u64>();
 constexpr auto U64_SUBMASKS = subMasks<u64, sizeof(u64) * BYTE_SIZE, BYTE_SIZE>();
+
+static_assert(U64_MASKS[0] == 0ULL, "U64_MASKS[i] must set the low i bits");
+static_assert(U64_MASKS[56] == 0x00ffffffffffffffULL, "U64_MASKS[i] must set the low i bits");
+static_assert(U64_MASKS[64] == ~0ULL, "U64_MASKS[i] must set the low i bits");
 
 template <Field field>
 constexpr std::pair<int, int> divmod() noexcept
