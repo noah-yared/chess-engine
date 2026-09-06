@@ -98,4 +98,5 @@ struct SearchResult
     int score = 0;
     bool aborted = false;
     SearchStats stats;
+    std::vector<Move> pv;
 };
