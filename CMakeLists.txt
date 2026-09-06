@@ -72,6 +72,7 @@ add_executable(engine_tests # declare test binary
   tests/perft_test.cpp
   tests/search_test.cpp
   tests/thread_pool_test.cpp
+  tests/transposition_table_test.cpp
 )
 target_include_directories(engine_tests
   PUBLIC
