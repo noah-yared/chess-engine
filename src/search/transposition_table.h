@@ -69,7 +69,9 @@ template <>
 struct FieldTraits<Field::BESTMOVE>
 {
     static constexpr size_t index = 1;
-    static constexpr int width = 12;
+    // start, end, and the promotion piece that distinguishes the four
+    // promotions sharing a start/end pair (Move::ORDERING_KEY_WIDTH)
+    static constexpr int width = 14;
     static constexpr int offset = FieldTraits<IndexToField<index - 1>::field>::offset +
                                   FieldTraits<IndexToField<index - 1>::field>::width;
 };
@@ -99,7 +101,9 @@ template <>
 struct FieldTraits<Field::DEPTH>
 {
     static constexpr size_t index = 3;
-    static constexpr int width = 4;
+    // Holds up to MAX_SEARCH_DEPTH; the previous 4 bits silently wrapped once
+    // iterative deepening passed depth 15.
+    static constexpr int width = 7;
     static constexpr int offset = FieldTraits<IndexToField<index - 1>::field>::offset +
                                   FieldTraits<IndexToField<index - 1>::field>::width;
 };
@@ -147,6 +151,15 @@ constexpr bool verifyTraits(std::index_sequence<Is...>) noexcept
 }
 
 static_assert(verifyTraits(std::make_index_sequence<FIELD_COUNT>{}), "Field traits index mismatch");
+
+// The fields tile the 12-byte entry exactly, which also lands SCORE and KEY on
+// byte boundaries.
+constexpr int PACKED_ENTRY_BYTES = 12;
+static_assert(FieldTraits<Field::KEY>::offset + FieldTraits<Field::KEY>::width ==
+                  PACKED_ENTRY_BYTES * 8,
+              "Packed TT entry must fill exactly 12 bytes with no spare bits");
+static_assert(FieldTraits<Field::BESTMOVE>::width == Move::ORDERING_KEY_WIDTH,
+              "TT best-move field must hold a full Move::orderingKey()");
 
 template <Field field, typename T>
 struct FieldData
@@ -294,11 +307,10 @@ struct PackedTTEntry
   public:
     PackedTTEntry() noexcept : pack_{} { clear(); }
 
-    PackedTTEntry(u64 key, int score, int depth, Bound bound, std::pair<int, int> bestMove) noexcept
-        : pack_{}
+    PackedTTEntry(u64 key, int score, int depth, Bound bound, u16 bestMove) noexcept : pack_{}
     {
         u32 vacantFlag = 0;
-        u32 encodedMove = ((bestMove.first & 0x3f) << 6) | (bestMove.second & 0x3f);
+        u32 encodedMove = bestMove;
         u32 boundValue = static_cast<int>(bound);
         u32 depthValue = depth;
         i16 scoreValue = static_cast<i16>(score);
@@ -322,10 +334,10 @@ struct PackedTTEntry
     {
         return getField<Field::DEPTH>() >= depth;
     }
-    [[nodiscard]] inline std::pair<int, int> getMove() const noexcept
+    // Move::orderingKey() of the stored best move.
+    [[nodiscard]] inline u16 getMove() const noexcept
     {
-        int field = getField<Field::BESTMOVE>();
-        return {field >> 6, field & 0x3f};
+        return getField<Field::BESTMOVE, u16>();
     }
     [[nodiscard]] inline int getDepth() const noexcept { return getField<Field::DEPTH>(); }
 
@@ -356,7 +368,7 @@ class TranspositionTable
     {
     }
 
-    void store(u64 key, int score, int depth, Bound bound, std::pair<int, int> bestMove) noexcept
+    void store(u64 key, int score, int depth, Bound bound, u16 bestMove) noexcept
     {
         size_t index = key % size_;
         table_[index] = PackedTTEntry{key, score, depth, bound, bestMove};

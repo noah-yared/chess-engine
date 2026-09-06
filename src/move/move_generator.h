@@ -153,6 +153,30 @@ class MoveGenerator
         return moves.push(candidateMove), true;
     }
 
+    // Pushes the legal moves from `start` to `end`, which is four moves for a
+    // promotion and one otherwise.
+    template <MoveType mType, PieceType pType, Color color>
+    static void pushIfLegalExpandingPromotions(const Position& pos, int start, int end,
+                                               MoveList& moves) noexcept
+    {
+        const auto createMove = [&](PieceType promotionPiece = PieceType::QUEEN) noexcept
+        { return MoveFactory::createMove<mType, pType, color>(pos, start, end, promotionPiece); };
+
+        if constexpr (mType != MoveType::Promotion)
+        {
+            pushIfLegal<mType, color>(pos, createMove(), moves);
+        }
+        else
+        {
+            // Every promotion piece shares this start/end pair and so shares its
+            // legality verdict; the first one tests it for the rest.
+            if (!pushIfLegal<mType, color>(pos, createMove(PROMOTION_PIECES.front()), moves))
+                return;
+            for (size_t i = 1; i < PROMOTION_PIECES.size(); ++i)
+                moves.push(createMove(PROMOTION_PIECES[i]));
+        }
+    }
+
     /////////////////////////
     // Safety Checks       //
     /////////////////////////
@@ -313,16 +337,12 @@ class MoveGenerator
         int rightAtkSquare = dest - Directions::sfamt(rightPawnAttack<color>);
         if (!isSquareOnRightEdge(dest) &&
             pos.isPieceOccupyingSquare(PieceType::PAWN, color, leftAtkSquare))
-            pushIfLegal<mType, color>(
-                pos,
-                MoveFactory::createMove<mType, PieceType::PAWN, color>(pos, leftAtkSquare, dest),
-                moves);
+            pushIfLegalExpandingPromotions<mType, PieceType::PAWN, color>(pos, leftAtkSquare, dest,
+                                                                          moves);
         if (!isSquareOnLeftEdge(dest) &&
             pos.isPieceOccupyingSquare(PieceType::PAWN, color, rightAtkSquare))
-            pushIfLegal<mType, color>(
-                pos,
-                MoveFactory::createMove<mType, PieceType::PAWN, color>(pos, rightAtkSquare, dest),
-                moves);
+            pushIfLegalExpandingPromotions<mType, PieceType::PAWN, color>(pos, rightAtkSquare, dest,
+                                                                          moves);
     }
 
     template <Color color>
@@ -353,11 +373,8 @@ class MoveGenerator
             BitUtils::filterRank<promotionRank<color>>(singlePawnPushTargets<color>(pos)),
             [&](int dest) noexcept
             {
-                pushIfLegal<MoveType::Promotion, color>(
-                    pos,
-                    MoveFactory::createMove<MoveType::Promotion, PieceType::PAWN, color>(
-                        pos, dest - Directions::sfamt(forward<color>), dest),
-                    moves);
+                pushIfLegalExpandingPromotions<MoveType::Promotion, PieceType::PAWN, color>(
+                    pos, dest - Directions::sfamt(forward<color>), dest, moves);
             });
         BitUtils::bitsForEach<>(
             pos.filterEnemySquares(

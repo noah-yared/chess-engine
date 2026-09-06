@@ -18,7 +18,6 @@ class RequiredPerftArgs(TypedDict):
 
 
 class PerftArgs(RequiredPerftArgs, total=False):
-    queen_promos_only: bool  # Optional
     captures_only: bool  # Optional
 
 
@@ -36,12 +35,10 @@ class ChildPerftResult(PerftResult):
 def count_nodes_at_depth(
     board: Board,
     depth: int,
-    queen_promos_only: bool = True,
     captures_only: bool = False,
 ) -> int:
     moves = process_moves(
         board,
-        filter_queen_promos=queen_promos_only,
         sort_moves=False,
         filter_captures=captures_only and (depth == 1),
     )
@@ -72,7 +69,6 @@ def perft_child(
     depth: int,
     start_fen: str,
     parent_task: tuple[int, str],
-    queen_promos_only: bool = True,
     captures_only: bool = False,
     **kwargs: Any,
 ) -> ChildPerftResult:
@@ -82,7 +78,6 @@ def perft_child(
         "node_count": count_nodes_at_depth(
             Board(start_fen),
             depth,
-            queen_promos_only=queen_promos_only,
             captures_only=captures_only,
         ),
         "is_child_task": True,
@@ -93,7 +88,6 @@ def perft_child(
 def perft(
     depth: int,
     start_fen: str,
-    queen_promos_only: bool,
     captures_only: bool,
     **kwargs: Any,
 ) -> PerftResult:
@@ -103,7 +97,6 @@ def perft(
         "node_count": count_nodes_at_depth(
             Board(start_fen),
             depth,
-            queen_promos_only=queen_promos_only,
             captures_only=captures_only,
         ),
     }
@@ -169,22 +162,18 @@ def perft_parallel(
         )
 
 
-def parse_args_from_stdin(
-    queen_promos_only: bool, captures_only: bool
-) -> Generator[PerftArgs, None, None]:
+def parse_args_from_stdin(captures_only: bool) -> Generator[PerftArgs, None, None]:
     for line in sys.stdin:
         if not line.strip():  # skip empty lines
             continue
         args = line.strip().split(",")
-        yield parse_cmdline_args(args, queen_promos_only, captures_only)
+        yield parse_cmdline_args(args, captures_only)
 
 
 def parse_cmdline_args(
     args: list[str],
-    queen_promos_only: bool,
     captures_only: bool,
     boolean_flags_to_strip: tuple[str, ...] = (
-        "queen-only",
         "captures-only",
         "priority",
         "write",
@@ -202,7 +191,6 @@ def parse_cmdline_args(
     return {
         "start_fen": kwargs["start_fen"],
         "depth": int(kwargs["depth"]),
-        "queen_promos_only": queen_promos_only,
         "captures_only": captures_only,
         "is_child_task": False,
         "parent_task": (int(kwargs["depth"]), kwargs["start_fen"]),
@@ -255,7 +243,6 @@ def exists_non_boolean_arg(args: list[str]) -> bool:
 def main(
     always_parallel: bool = True,
     high_priority: bool = False,
-    queen_promos_only: bool = True,
     captures_only: bool = False,
 ):
     args = sys.argv[1:]
@@ -268,7 +255,7 @@ def main(
         sys.stderr.write("Progress display enabled\n")
 
     if exists_non_boolean_arg(args):
-        parsed_args = parse_cmdline_args(args, queen_promos_only, captures_only)
+        parsed_args = parse_cmdline_args(args, captures_only)
         if always_parallel:
             log_results(perft_parallel([parsed_args], display_progress)[0], log_func)
         else:
@@ -276,12 +263,7 @@ def main(
     else:
         sys.stderr.write("No arguments provided... reading from stdin\n")
         for result in perft_parallel(
-            list(
-                parse_args_from_stdin(
-                    queen_promos_only=queen_promos_only,
-                    captures_only=captures_only,
-                )
-            ),
+            list(parse_args_from_stdin(captures_only=captures_only)),
             display_progress,
         ):
             log_results(result, log_func)
@@ -321,6 +303,5 @@ if __name__ == "__main__":
     main(
         always_parallel=True,
         high_priority=try_to_execute_with_priority(),  # ITS MY CPU TIME!!! •`_´•
-        queen_promos_only=("-q" in sys.argv) or ("--queen-only" in sys.argv),
         captures_only=("-c" in sys.argv) or ("--captures-only" in sys.argv),
     )

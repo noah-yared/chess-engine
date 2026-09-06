@@ -11,7 +11,7 @@ A shared utility module providing common functionality for chess-related scripts
 - **`game_tree_traverse()`**: Traverses a chess game tree to a specified depth, executing callbacks for each move
 - **`parse_chess_args()`**: Parses command-line arguments in flag-value format (e.g., `--depth 5 --out file.txt`)
 - **`FileManager`**: Context manager for file output operations
-- **`processed_moves()`**: Sorts and optionally filters moves (e.g., queen promotions only)
+- **`processed_moves()`**: Sorts and optionally filters moves (e.g., captures only)
 - **`chunk_board()`**: Splits board positions into chunks for parallel processing
 
 ---
@@ -34,14 +34,13 @@ python perft.py -d 5 -s "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 
 # Multiple tests from stdin with progress
 echo "-d,3,-s,rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1" | python perft.py -r
 
-# With high priority and file output (output/perft.out) and queen promotions only
-python perft.py -d 6 -p -w -q
+# With high priority and file output (output/perft.out)
+python perft.py -d 6 -p -w
 ```
 
 **Flags:**
 - `-d <depth>`: Perft depth
 - `-s <fen>`: Starting FEN position
-- `-q` / `--queen-only`: Only consider queen promotions
 - `-c` / `--captures-only`: Only count capture moves
 - `-p` / `--priority`: Run with high CPU priority (requires sudo)
 - `-w` / `--write`: Write results to file instead of console
@@ -55,9 +54,8 @@ Bash script that extracts perft test cases from the C++ test file and runs them 
 
 **Usage:**
 ```bash
-# Run scraped perft tests with high priority, write results to file (output/perft.out),
-# and ignore non-queen promotions
-./scrape_perft_tests.sh -w -q -p
+# Run scraped perft tests with high priority, write results to file (output/perft.out)
+./scrape_perft_tests.sh -w -p
 
 # Run scraped perft tests with standard priority, write results to console, and only count
 # capturing moves at depth 1

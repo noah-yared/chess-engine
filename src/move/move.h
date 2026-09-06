@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstddef>
 #include <functional>
 #include <iostream>
@@ -27,6 +28,16 @@ concept CanCapture = (mType == MoveType::Normal || mType == MoveType::Promotion)
 // ROOK, KNIGHT, BISHOP, QUEEN are contiguous in PieceType, so a promotion
 // target packs into two bits as `piece - ROOK`.
 constexpr int PROMOTION_PIECE_OFFSET = static_cast<int>(PieceType::ROOK);
+constexpr int NUM_PROMOTION_PIECES = 4;
+
+// Queen first so it is generated (and therefore ordered) ahead of the
+// underpromotions it dominates in nearly every position.
+constexpr std::array<PieceType, NUM_PROMOTION_PIECES> PROMOTION_PIECES = {
+    PieceType::QUEEN,
+    PieceType::ROOK,
+    PieceType::BISHOP,
+    PieceType::KNIGHT,
+};
 
 [[nodiscard]] constexpr char promotionPieceToChar(PieceType piece) noexcept
 {
@@ -71,6 +82,9 @@ constexpr int PROMOTION_PIECE_OFFSET = static_cast<int>(PieceType::ROOK);
  *   bits 17-19  moved piece
  *   bits 20-22  captured piece (PieceType::NONE when the move is not a capture)
  *   bit  23     side to move
+ *
+ * Start and end occupy the low twelve bits so that `orderingKey()` shares a
+ * prefix with the transposition table's best-move field.
  */
 class Move
 {
@@ -123,6 +137,16 @@ class Move
         return 7 * queenSide + 56 * blackCastle;
     }
     [[nodiscard]] int castledRookEnd() const noexcept { return (start() + end()) / 2; }
+
+    // Identity used by the transposition table's best-move field: start, end,
+    // and the promotion piece that distinguishes the four promotions sharing a
+    // start/end pair.
+    [[nodiscard]] u16 orderingKey() const noexcept
+    {
+        return static_cast<u16>((data_ & KEY_STEP_MASK) | (promotionBits() << KEY_PROMO_OFFSET));
+    }
+
+    static constexpr int ORDERING_KEY_WIDTH = 14;
 
     [[nodiscard]] std::string uci() const noexcept
     {
@@ -177,6 +201,17 @@ class Move
     static constexpr int SIDE_OFFSET = CAPTURED_OFFSET + PIECE_WIDTH;
 
     static_assert(SIDE_OFFSET + SIDE_WIDTH <= 32, "Move fields must fit in 32 bits");
+
+    // The ordering key is the start/end pair copied straight out of the low bits
+    // of data_, with the promotion piece packed directly above it.
+    static constexpr int KEY_STEP_WIDTH = 2 * SQUARE_WIDTH;
+    static constexpr u32 KEY_STEP_MASK = (1u << KEY_STEP_WIDTH) - 1;
+    static constexpr int KEY_PROMO_OFFSET = KEY_STEP_WIDTH;
+
+    static_assert(START_OFFSET == 0 && END_OFFSET == SQUARE_WIDTH,
+                  "Ordering key copies start and end out of the low bits of data_");
+    static_assert(KEY_PROMO_OFFSET + PROMO_WIDTH == ORDERING_KEY_WIDTH,
+                  "Ordering key must hold start, end, and the promotion piece");
 
     [[nodiscard]] int field(int offset, int width) const noexcept
     {

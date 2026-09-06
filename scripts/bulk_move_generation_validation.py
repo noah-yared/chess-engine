@@ -144,7 +144,7 @@ def actual_generated_moves(fen: str) -> set[str]:
 def expected_generated_moves(fen: str):
     try:
         board = chess.Board(fen)
-        return {move.uci() for move in board.legal_moves if move.uci()[-1] not in "rnb"}
+        return {move.uci() for move in board.legal_moves}
     except ValueError as e:
         print_to_err_log(f"\nWarning: Invalid FEN, got error {e}\n")
         return set()

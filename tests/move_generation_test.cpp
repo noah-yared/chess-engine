@@ -65,21 +65,23 @@ TEST_F(MoveGenerationTest, HandlesStartingBoard)
 TEST_F(MoveGenerationTest, HandlesPromotion_WhitePawn)
 {
     loadFen("3K4/PP1p1N1n/bp2pk1P/PN1p1p2/1p3PBb/2PPB2q/4n3/1r1Q2Rr w - - 0 4");
-    expectLegalMoves("a5b6", "a7a8q", "b5a3", "b5c7", "b5d4", "b5d6", "b7b8q", "c3b4", "c3c4",
-                     "d1a4", "d1b1", "d1b3", "d1c1", "d1c2", "d1d2", "d1e1", "d1e2", "d1f1", "d3d4",
-                     "d8c7", "d8c8", "d8d7", "d8e8", "e3b6", "e3c1", "e3c5", "e3d2", "e3d4", "e3f2",
-                     "f7d6", "f7e5", "f7g5", "f7h8", "g1e1", "g1f1", "g1g2", "g1g3", "g1h1", "g4e2",
-                     "g4f3", "g4f5", "g4h3", "g4h5");
+    expectLegalMoves("a5b6", "a7a8b", "a7a8n", "a7a8q", "a7a8r", "b5a3", "b5c7", "b5d4", "b5d6",
+                     "b7b8b", "b7b8n", "b7b8q", "b7b8r", "c3b4", "c3c4", "d1a4", "d1b1", "d1b3",
+                     "d1c1", "d1c2", "d1d2", "d1e1", "d1e2", "d1f1", "d3d4", "d8c7", "d8c8", "d8d7",
+                     "d8e8", "e3b6", "e3c1", "e3c5", "e3d2", "e3d4", "e3f2", "f7d6", "f7e5", "f7g5",
+                     "f7h8", "g1e1", "g1f1", "g1g2", "g1g3", "g1h1", "g4e2", "g4f3", "g4f5", "g4h3",
+                     "g4h5");
 }
 
 TEST_F(MoveGenerationTest, HandlesEnpassant_WhitePawnOnE5)
 {
     loadFen("8/PPK2N1n/bp2k2P/PN1pPp2/1p4Bb/2PPB2q/4n3/1r1Q2Rr w - d6 0 8");
-    expectLegalMoves("a5b6", "a7a8q", "b5a3", "b5d4", "b5d6", "b7b8q", "c3b4", "c3c4", "c7b6",
-                     "c7b8", "c7c6", "c7c8", "d1a4", "d1b1", "d1b3", "d1c1", "d1c2", "d1d2", "d1e1",
-                     "d1e2", "d1f1", "d3d4", "e3b6", "e3c1", "e3c5", "e3d2", "e3d4", "e3f2", "e3f4",
-                     "e3g5", "e5d6", "f7d6", "f7d8", "f7g5", "f7h8", "g1e1", "g1f1", "g1g2", "g1g3",
-                     "g1h1", "g4e2", "g4f3", "g4f5", "g4h3", "g4h5");
+    expectLegalMoves("a5b6", "a7a8b", "a7a8n", "a7a8q", "a7a8r", "b5a3", "b5d4", "b5d6", "b7b8b",
+                     "b7b8n", "b7b8q", "b7b8r", "c3b4", "c3c4", "c7b6", "c7b8", "c7c6", "c7c8",
+                     "d1a4", "d1b1", "d1b3", "d1c1", "d1c2", "d1d2", "d1e1", "d1e2", "d1f1", "d3d4",
+                     "e3b6", "e3c1", "e3c5", "e3d2", "e3d4", "e3f2", "e3f4", "e3g5", "e5d6", "f7d6",
+                     "f7d8", "f7g5", "f7h8", "g1e1", "g1f1", "g1g2", "g1g3", "g1h1", "g4e2", "g4f3",
+                     "g4f5", "g4h3", "g4h5");
 }
 
 TEST_F(MoveGenerationTest, HandlesBlackKingInCheck_OnlyEscapeMoves)
@@ -130,25 +132,30 @@ TEST_F(MoveGenerationTest, HandlesPositionWithMultiplePawnPromotions)
 {
     loadFen("1n1r1b1r/P1P1P1P1/2BNq1k1/7R/3Q4/1P1N2K1/P1PBP3/5R2 w - - 15 45");
     expectLegalMoves(
-        "a2a3", "a2a4", "a7a8q", "a7b8q", "b3b4", "c2c3", "c2c4", "c6a4", "c6a8", "c6b5", "c6b7",
-        "c6d5", "c6d7", "c6e4", "c6e8", "c6f3", "c6g2", "c6h1", "c7b8q", "c7c8q", "c7d8q", "d2a5",
-        "d2b4", "d2c1", "d2c3", "d2e1", "d2e3", "d2f4", "d2g5", "d2h6", "d3b2", "d3b4", "d3c1",
-        "d3c5", "d3e1", "d3e5", "d3f2", "d3f4", "d4a1", "d4a4", "d4b2", "d4b4", "d4b6", "d4c3",
-        "d4c4", "d4c5", "d4d5", "d4e3", "d4e4", "d4e5", "d4f2", "d4f4", "d4f6", "d4g1", "d4g4",
-        "d4h4", "d6b5", "d6b7", "d6c4", "d6c8", "d6e4", "d6e8", "d6f5", "d6f7", "e2e3", "e2e4",
-        "e7d8q", "e7e8q", "e7f8q", "f1a1", "f1b1", "f1c1", "f1d1", "f1e1", "f1f2", "f1f3", "f1f4",
-        "f1f5", "f1f6", "f1f7", "f1f8", "f1g1", "f1h1", "g3f2", "g3f3", "g3f4", "g3g2", "g3h2",
-        "g3h4", "g7f8q", "g7g8q", "g7h8q", "h5a5", "h5b5", "h5c5", "h5d5", "h5e5", "h5f5", "h5g5",
-        "h5h1", "h5h2", "h5h3", "h5h4", "h5h6", "h5h7", "h5h8");
+        "a2a3", "a2a4", "a7a8b", "a7a8n", "a7a8q", "a7a8r", "a7b8b", "a7b8n", "a7b8q", "a7b8r",
+        "b3b4", "c2c3", "c2c4", "c6a4", "c6a8", "c6b5", "c6b7", "c6d5", "c6d7", "c6e4", "c6e8",
+        "c6f3", "c6g2", "c6h1", "c7b8b", "c7b8n", "c7b8q", "c7b8r", "c7c8b", "c7c8n", "c7c8q",
+        "c7c8r", "c7d8b", "c7d8n", "c7d8q", "c7d8r", "d2a5", "d2b4", "d2c1", "d2c3", "d2e1",
+        "d2e3", "d2f4", "d2g5", "d2h6", "d3b2", "d3b4", "d3c1", "d3c5", "d3e1", "d3e5", "d3f2",
+        "d3f4", "d4a1", "d4a4", "d4b2", "d4b4", "d4b6", "d4c3", "d4c4", "d4c5", "d4d5", "d4e3",
+        "d4e4", "d4e5", "d4f2", "d4f4", "d4f6", "d4g1", "d4g4", "d4h4", "d6b5", "d6b7", "d6c4",
+        "d6c8", "d6e4", "d6e8", "d6f5", "d6f7", "e2e3", "e2e4", "e7d8b", "e7d8n", "e7d8q",
+        "e7d8r", "e7e8b", "e7e8n", "e7e8q", "e7e8r", "e7f8b", "e7f8n", "e7f8q", "e7f8r", "f1a1",
+        "f1b1", "f1c1", "f1d1", "f1e1", "f1f2", "f1f3", "f1f4", "f1f5", "f1f6", "f1f7", "f1f8",
+        "f1g1", "f1h1", "g3f2", "g3f3", "g3f4", "g3g2", "g3h2", "g3h4", "g7f8b", "g7f8n",
+        "g7f8q", "g7f8r", "g7g8b", "g7g8n", "g7g8q", "g7g8r", "g7h8b", "g7h8n", "g7h8q",
+        "g7h8r", "h5a5", "h5b5", "h5c5", "h5d5", "h5e5", "h5f5", "h5g5", "h5h1", "h5h2", "h5h3",
+        "h5h4", "h5h6", "h5h7", "h5h8");
 }
 
 TEST_F(MoveGenerationTest, HandlesPinnedSlidingPiece_CanCapturePinner)
 {
     loadFen("NR5r/3P1rpk/2n2P1p/pnP2q2/P1RPQP1N/BP1B1pKP/p1pp3p/b7 b - - 0 1");
     expectLegalMoves("a1b2", "a1c3", "a1d4", "b5a3", "b5a7", "b5c3", "b5c7", "b5d4", "b5d6",
-                     "c2c1q", "c6a7", "c6b4", "c6b8", "c6d4", "c6d8", "c6e5", "c6e7", "d2d1q",
-                     "f3f2", "f5e4", "f5g6", "f7d7", "f7e7", "f7f6", "f7f8", "g7f6", "g7g5", "g7g6",
-                     "h2h1q", "h6h5", "h8b8", "h8c8", "h8d8", "h8e8", "h8f8", "h8g8");
+                     "c2c1b", "c2c1n", "c2c1q", "c2c1r", "c6a7", "c6b4", "c6b8", "c6d4", "c6d8",
+                     "c6e5", "c6e7", "d2d1b", "d2d1n", "d2d1q", "d2d1r", "f3f2", "f5e4", "f5g6",
+                     "f7d7", "f7e7", "f7f6", "f7f8", "g7f6", "g7g5", "g7g6", "h2h1b", "h2h1n",
+                     "h2h1q", "h2h1r", "h6h5", "h8b8", "h8c8", "h8d8", "h8e8", "h8f8", "h8g8");
 }
 
 TEST_F(MoveGenerationTest, HandlesAvailableCastle_WhiteLongSide)

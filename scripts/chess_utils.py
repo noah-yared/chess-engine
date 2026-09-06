@@ -15,7 +15,6 @@ def chunk_board(board: Board, chunks: int=NUM_CPUS, **kwargs) -> Iterable[Iterab
     each with roughly the same number of moves.
     """
     moves = process_moves(board, sort_moves=kwargs.get("sort_moves", False),
-                          filter_queen_promos=kwargs.get("filter_queen_promos", True),
                           filter_captures=kwargs.get("filter_captures", False))
     # randomly permute moves
     random.shuffle(moves) 
@@ -29,16 +28,6 @@ def chunk_board(board: Board, chunks: int=NUM_CPUS, **kwargs) -> Iterable[Iterab
     batch_size = ceil(len(moves) / chunks)
     return itertools.batched(child_fens, batch_size)
 
-def _filter_queen_promotions_only(moves: list[Move]) -> list[Move]:
-    """
-    Filter out all promotions to pieces other than queens for
-    consistency with my chess engine that only considers queen
-    promotions to reduce the potential search space as (queen
-    promotions are optimal in over 95% of cases)
-    """
-    return [move for move in moves if move.uci()[-1] not in 'rbn']
-
-
 def _sort_moves(moves: list[Move]) -> list[Move]:
     """
     Sort moves lexicographically by their uci (universal 
@@ -47,17 +36,15 @@ def _sort_moves(moves: list[Move]) -> list[Move]:
     return sorted(moves, key=lambda move: move.uci())
 
 
-def process_moves(board: Board, filter_queen_promos: bool=True,
-                  sort_moves: bool=True, filter_captures: bool=False) -> list[Move]:
+def process_moves(board: Board, sort_moves: bool=True,
+                  filter_captures: bool=False) -> list[Move]:
     """
-    Process legal moves in board by optionally filtering out all non-queen promotions,
-    sorting moves using uci as key, and/or filtering all non-captures out
+    Process legal moves in board by optionally sorting moves using uci as key,
+    and/or filtering all non-captures out
     """
     move_list = list(
         board.generate_legal_captures() if filter_captures
         else board.generate_legal_moves())
-    if filter_queen_promos:
-        move_list = _filter_queen_promotions_only(move_list)
     if sort_moves:
         move_list = _sort_moves(move_list)
     return move_list
@@ -71,7 +58,6 @@ def game_tree_traverse(
         start_fen: str,
         depth: int,
         callback: GameTreeCallback,
-        filter_queen_promos: bool=True
 ) -> None:
     """
     Process moves for game tree from starting position up to a 
@@ -85,8 +71,7 @@ def game_tree_traverse(
         if not depth:
             return 1
         node_count = 0
-        for move in process_moves(board, filter_queen_promos=filter_queen_promos,
-                                  sort_moves=True, filter_captures=False):
+        for move in process_moves(board, sort_moves=True, filter_captures=False):
             old_fen = board.fen(en_passant="fen")
             board.push(move) # apply move
             callback(old_fen=old_fen, new_fen=board.fen(en_passant="fen"), move=move, depth=depth)

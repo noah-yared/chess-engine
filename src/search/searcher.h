@@ -172,11 +172,6 @@ class Searcher
         }
     }
 
-    [[nodiscard]] static std::pair<int, int> getStep(Move move) noexcept
-    {
-        return {move.start(), move.end()};
-    }
-
     [[nodiscard]] static Bound getBound(int score, int alpha, int beta) noexcept
     {
         if (score < alpha)
@@ -193,7 +188,7 @@ class Searcher
             return;
 
         context.tt->store(context.position.getHash(), score, depth, getBound(score, alpha, beta),
-                          getStep(bestMove));
+                          bestMove.orderingKey());
     }
 
     // `color` is the side to move at the parent node. Searches `move` and restores.

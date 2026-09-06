@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <utility>
 
 #include "board/constants.h"
 #include "board/position.h"
@@ -48,7 +47,21 @@ class MoveOrdering
     static constexpr int PROMOTION_SCORE = 100'000;
     static constexpr int CAPTURE_SCORE = 10'000;
 
-    static constexpr std::pair<int, int> NO_TT_MOVE = {-1, -1};
+    // No real move has start == end, so a zeroed ordering key cannot collide
+    // with one.
+    static constexpr u16 NO_TT_MOVE = 0;
+
+    // Separates the four promotions sharing a start/end pair so queens still
+    // sort ahead of the underpromotions they dominate. Mirrors the material
+    // values in the evaluator.
+    static constexpr std::array<int, NUM_PIECE_TYPES> PROMOTION_PIECE_BONUS = {
+        0,   // PAWN, never a promotion target
+        500, // ROOK
+        320, // KNIGHT
+        330, // BISHOP
+        900, // QUEEN
+        0,   // KING, never a promotion target
+    };
 
     static constexpr std::array<std::array<int, NUM_PIECE_TYPES + 1>, NUM_PIECE_TYPES + 1> MVVLVA{{
         {15, 12, 14, 13, 11, 10, 0}, // victim P, attacker P, R, N, B, Q, K, None
@@ -67,7 +80,8 @@ class MoveOrdering
         int score = 0;
         if (move.type() == MoveType::Promotion)
         {
-            score += PROMOTION_SCORE;
+            score += PROMOTION_SCORE +
+                     PROMOTION_PIECE_BONUS[static_cast<size_t>(move.promotionPiece())];
         }
 
         if (move.isCapture())
@@ -79,10 +93,9 @@ class MoveOrdering
         return score;
     }
 
-    [[nodiscard]] static int score(const Move move, std::pair<int, int> ttMove,
-                                   bool inQuiescence) noexcept
+    [[nodiscard]] static int score(const Move move, u16 ttMove, bool inQuiescence) noexcept
     {
-        if (ttMove != NO_TT_MOVE && std::pair(move.start(), move.end()) == ttMove)
+        if (ttMove != NO_TT_MOVE && move.orderingKey() == ttMove)
         {
             return TT_MOVE_SCORE;
         }
@@ -90,8 +103,8 @@ class MoveOrdering
         return tacticalScore(move, inQuiescence);
     }
 
-    [[nodiscard]] static std::pair<int, int> getTTMove(const Position& position,
-                                                       const TranspositionTable* tt) noexcept
+    [[nodiscard]] static u16 getTTMove(const Position& position,
+                                       const TranspositionTable* tt) noexcept
     {
         if (tt == nullptr)
         {
