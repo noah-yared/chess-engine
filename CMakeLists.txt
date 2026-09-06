@@ -66,6 +66,7 @@ add_executable(engine_tests # declare test binary
   # test files
   tests/check_detection_test.cpp
   tests/move_apply_test.cpp
+  tests/move_encoding_test.cpp
   tests/move_undo_test.cpp
   tests/move_generation_test.cpp
   tests/perft_test.cpp
