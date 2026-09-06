@@ -3,7 +3,6 @@
 #include "engine_config.h"
 #include "move/move_generator.h"
 #include "move/uci.h"
-#include "search/strength.h"
 #include <array>
 #include <chrono>
 #include <filesystem>
@@ -473,13 +472,13 @@ int handleAppModeCommand(int argc, const char* argv[])
             }
 
             int strengthLevel = std::stoi(tokens[1]);
-            if (strengthLevel < 0 || strengthLevel >= static_cast<int>(Strength::NUM_LEVELS))
+            if (strengthLevel < 0 || strengthLevel >= static_cast<int>(StrengthLevel::NUM_LEVELS))
             {
                 std::cout << "Invalid strength level: " << tokens[1] << '\n';
                 return -1;
             }
 
-            auto move = engine.playEngineMove(Strength(strengthLevel), parallelism);
+            auto move = engine.playEngineMove(StrengthLevel(strengthLevel), parallelism);
             std::cout << std::visit([](auto&& arg) { return arg.uci(); }, move) << '\n'
                       << std::endl;
         }

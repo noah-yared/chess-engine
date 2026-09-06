@@ -12,8 +12,15 @@
 #include "move/move.h"
 #include "search/search_types.h"
 #include "search/searcher.h"
-#include "search/strength.h"
 #include "search/transposition_table.h"
+
+enum class StrengthLevel
+{
+    LOW,
+    MEDIUM,
+    HIGH,
+    NUM_LEVELS
+};
 
 class EngineController
 {
@@ -43,7 +50,7 @@ class EngineController
         return result.bestMove;
     }
 
-    MoveVariant playEngineMove(Strength strength, int parallelism = 1)
+    MoveVariant playEngineMove(StrengthLevel strength, int parallelism = 1)
     {
         return playEngineMove(buildStrengthConfig(strength).setParallelism(parallelism));
     }
@@ -80,22 +87,22 @@ class EngineController
         return threadPool_.get();
     }
 
-    [[nodiscard]] static int computeTimeBudgetMS(Strength strength)
+    [[nodiscard]] static int computeTimeBudgetMS(StrengthLevel strength)
     {
-        std::array<int, static_cast<int>(Strength::NUM_LEVELS)> timeBudgetsMS = {100, 1500, 8000};
+        std::array<int, static_cast<int>(StrengthLevel::NUM_LEVELS)> timeBudgetsMS = {100, 1500, 8000};
         return timeBudgetsMS[static_cast<int>(strength)];
     }
 
-    [[nodiscard]] static SearchConfig buildStrengthConfig(Strength strength)
+    [[nodiscard]] static SearchConfig buildStrengthConfig(StrengthLevel strength)
     {
         switch (strength)
         {
-        case Strength::LOW:
+        case StrengthLevel::LOW:
             return SearchConfig::fixedTime(computeTimeBudgetMS(strength))
                 .withoutQuiescence() // misses tactics/exchanges
                 .withoutTT();        // slow down search
-        case Strength::MEDIUM:
-        case Strength::HIGH:
+        case StrengthLevel::MEDIUM:
+        case StrengthLevel::HIGH:
             return SearchConfig::fixedTime(computeTimeBudgetMS(strength));
         default:
             // should not reach this case

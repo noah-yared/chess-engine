@@ -8,7 +8,6 @@
 #include "move/move_generator.h"
 #include "search/engine_controller.h"
 #include "search/searcher.h"
-#include "search/strength.h"
 #include "search/transposition_table.h"
 #include "test_utils.h"
 
