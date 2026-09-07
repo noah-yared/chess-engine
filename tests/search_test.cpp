@@ -3,6 +3,7 @@
 #include <array>
 #include <chrono>
 #include <string>
+#include <thread>
 
 #include "board/constants.h"
 #include "move/move_generator.h"
@@ -211,4 +212,23 @@ TEST_F(SearchTest, MultiWorkerTimedSearchWithHighDepthStopsOnTime)
     EXPECT_TRUE(isLegalMove(result.bestMove));
     EXPECT_GT(result.stats.nodesSearched, 0ULL);
     EXPECT_LT(elapsed.count(), 250);
+}
+
+TEST_F(SearchTest, MultiWorkerSearchCanBeAbortedWithStopFlag) {
+    loadStartingPosition();
+    std::atomic<bool> stopFlag{false};
+
+    SearchResult result;
+    std::thread thread([&stopFlag, &result, this] {
+        EngineController engine(this->pos);
+        auto config = SearchConfig::fixedDepth(MAX_SEARCH_DEPTH).setParallelism(4);
+        result = engine.search(config, &stopFlag);
+    });
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+    stopFlag.store(true, std::memory_order_relaxed);
+    thread.join();
+
+    EXPECT_TRUE(isLegalMove(result.bestMove));
+    EXPECT_GT(result.stats.nodesSearched, 0ULL);
 }

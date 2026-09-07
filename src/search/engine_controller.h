@@ -29,9 +29,9 @@ class EngineController
     explicit EngineController(const std::string& fen) : position_{fen} {};
 
     // Precondition for search/playEngineMove: position_ has at least one legal move.
-    SearchResult search(const SearchConfig& config)
+    SearchResult search(const SearchConfig& config, const std::atomic<bool>* stopFlag = nullptr)
     {
-        return Searcher::search(position_, config, ttFor(config), threadPoolFor(config));
+        return Searcher::search(position_, config, ttFor(config), threadPoolFor(config), stopFlag);
     }
 
     // Useful for quick tests.

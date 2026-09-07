@@ -27,14 +27,15 @@ class Searcher
     // - root has at least one legal move.
     // - config.limits.maxDepth >= 1.
     static SearchResult search(const Position& root, const SearchConfig& config,
-                               TranspositionTable* tt, ThreadPool* threadPool = nullptr)
+                               TranspositionTable* tt, ThreadPool* threadPool = nullptr,
+                               const std::atomic<bool>* stopFlag = nullptr)
     {
         // initialize search contexts for each threadpool worker
         const int n = threadPool != nullptr ? threadPool->numWorkers() : 1;
         std::vector<Context> contexts;
         contexts.reserve(n);
         for (int i = 0; i < n; ++i) {
-            contexts.emplace_back(root, config, config.options.useTT ? tt : nullptr);
+            contexts.emplace_back(root, config, config.options.useTT ? tt : nullptr, stopFlag);
         }
 
         // ensure valid max depth
@@ -98,28 +99,37 @@ class Searcher
         std::vector<Move> pv;
     };
 
-    class Timer
+    class AbortChecker
     {
       public:
-        Timer() = delete;
-        explicit Timer(int durationMS)
-            : deadline_{std::chrono::steady_clock::now() + std::chrono::milliseconds(durationMS)},
-              numPolls_{0}
+        AbortChecker() = delete;
+        explicit AbortChecker(const std::atomic<bool>* stopFlag)
+            : stopFlag_{stopFlag},
+              deadline_{std::chrono::steady_clock::time_point::max()}
         {
         }
 
-        [[nodiscard]] bool isExpired()
+        void setTimeLimit(int durationMS)
         {
-            if (++numPolls_ % ABORT_CHECK_PERIOD != 0)
-            {
+            deadline_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(durationMS);
+        }
+
+        [[nodiscard]] bool shouldAbort()
+        {
+            if (++numPolls_ != ABORT_CHECK_PERIOD)
                 return false;
-            }
-            return std::chrono::steady_clock::now() >= deadline_;
+            numPolls_ = 0ULL;
+            return (stopFlag_ != nullptr && stopFlag_->load(std::memory_order_relaxed)) || std::chrono::steady_clock::now() > deadline_;
         }
 
       private:
+        // number of polls since last check for abort per-thread
+        static thread_local inline u64 numPolls_{0ULL};
+
+        // flag to signal to abort the search
+        const std::atomic<bool> * const stopFlag_;
+        // deadline for the search, defaults to max time point if time limit is not set
         std::chrono::steady_clock::time_point deadline_;
-        u64 numPolls_;
     };
 
     struct Context
@@ -130,19 +140,14 @@ class Searcher
         MoveList moveBuffer;
         TranspositionTable* tt = nullptr;
         const SearchConfig* config = nullptr;
-        std::optional<Timer> timer;
+        AbortChecker abortChecker;
 
-        Context(const Position& position, const SearchConfig& config, TranspositionTable* tt)
-            : position(position), stats(), undoStack(), moveBuffer(), tt(tt), config(&config)
+        Context(const Position& position, const SearchConfig& config, TranspositionTable* tt, const std::atomic<bool>* stopFlag)
+            : position(position), stats(), undoStack(), moveBuffer(), tt(tt), config(&config), abortChecker(stopFlag)
         {
-            // add deadline for search if time control enabled
             if (config.options.useTimeManagement)
             {
-                timer.emplace(config.limits.timeLimitMS);
-            }
-            else
-            {
-                timer = std::nullopt;
+                abortChecker.setTimeLimit(config.limits.timeLimitMS);
             }
         }
     };
@@ -357,7 +362,7 @@ class Searcher
         const int index = threadPool != nullptr ? ThreadPool::workerId() : 0;
         auto& context = contexts[index];
 
-        if (context.config->options.useTimeManagement && context.timer->isExpired())
+        if (context.abortChecker.shouldAbort())
         {
             return NodeResult{.aborted = true};
         }
@@ -430,7 +435,7 @@ class Searcher
     template <Color color>
     static NodeResult quiesce(Context& context, int alpha, int beta, int ply)
     {
-        if (context.config->options.useTimeManagement && context.timer->isExpired())
+        if (context.abortChecker.shouldAbort())
         {
             return NodeResult{.aborted = true};
         }
