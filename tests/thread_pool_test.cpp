@@ -53,6 +53,7 @@ TEST(ThreadPoolTest, HelpersStealAndRunEachTaskOnce)
 {
     constexpr int kTaskCount = 256;
     ThreadPool pool(4);
+    pool.beginWork();
     std::vector<std::atomic<int>> executionCounts(kTaskCount);
     std::atomic<int> completed{0};
 
@@ -75,6 +76,8 @@ TEST(ThreadPoolTest, HelpersStealAndRunEachTaskOnce)
     EXPECT_EQ(completed.load(), kTaskCount);
     for (std::size_t taskId = 0; taskId < executionCounts.size(); ++taskId)
         EXPECT_EQ(executionCounts[taskId].load(), 1) << "task " << taskId;
+
+    pool.endWork();
 }
 
 TEST(ThreadPoolTest, MainWorkerAndHelpersCooperate)
@@ -86,6 +89,7 @@ TEST(ThreadPoolTest, MainWorkerAndHelpersCooperate)
     std::atomic<int> helperExecutions{0};
     std::atomic<int> completed{0};
     ThreadPool pool(4);
+    pool.beginWork();
 
     for (int i = 0; i < kTaskCount; ++i)
     {
@@ -119,12 +123,15 @@ TEST(ThreadPoolTest, MainWorkerAndHelpersCooperate)
 
     EXPECT_TRUE(waitUntil([&completed] { return completed.load() >= kTaskCount; }));
     EXPECT_EQ(completed.load(), kTaskCount);
+
+    pool.endWork();
 }
 
 TEST(ThreadPoolTest, NestedSubmitFromRunningTask)
 {
     constexpr int kChildTasks = 64;
     ThreadPool pool(4);
+    pool.beginWork();
     std::atomic<int> completed{0};
 
     pool.submit(
@@ -139,6 +146,8 @@ TEST(ThreadPoolTest, NestedSubmitFromRunningTask)
 
     EXPECT_TRUE(waitUntil([&completed] { return completed.load() >= kChildTasks; }));
     EXPECT_EQ(completed.load(), kChildTasks);
+
+    pool.endWork();
 }
 
 TEST(ThreadPoolTest, DestructorDrainsQueuedTasks)
@@ -161,6 +170,7 @@ TEST(ThreadPoolTest, LastElementStealDoesNotAbort)
 {
     constexpr int kIters = 20000;
     ThreadPool pool(2);
+    pool.beginWork();
     std::atomic<int> completed{0};
     int expected = 0;
 
@@ -178,4 +188,6 @@ TEST(ThreadPoolTest, LastElementStealDoesNotAbort)
     }
 
     EXPECT_EQ(completed.load(), expected);
+
+    pool.endWork();
 }

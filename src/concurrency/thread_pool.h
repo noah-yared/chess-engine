@@ -2,6 +2,8 @@
 
 #include <atomic>
 #include <cassert>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 
 #include "work_stealing_queue.h"
@@ -16,6 +18,11 @@
 // tryRunOne() (popBottom, else steal). Tasks may themselves submit further
 // work. Do not submit from a thread that is not a pool worker.
 //
+// Call beginWork() / endWork() from worker 0 around a parallel work phase.
+// While active, helpers stay hot when queues are momentarily empty; when
+// inactive, helpers block on idle_cv_ instead of spinning. endWork() drains
+// remaining tasks before clearing active_.
+//
 // On destruction, the constructing thread drains remaining work, signals
 // shutdown, and joins the helpers.
 //
@@ -26,7 +33,13 @@ class ThreadPool
   public:
     // `num_workers` includes main worker (thread that runs constructor)
     explicit ThreadPool(int num_workers = 8)
-        : workers_{}, worker_queues_(num_workers), shutdown_{false}, num_workers_{num_workers}
+        : workers_{},
+          worker_queues_(num_workers),
+          shutdown_{false},
+          idle_mutex_{},
+          idle_cv_{},
+          active_{false},
+          num_workers_{num_workers}
     {
         assert(num_workers >= 1);
         attach();
@@ -37,6 +50,25 @@ class ThreadPool
 
     [[nodiscard]] static int workerId() noexcept { return worker_id_; }
     [[nodiscard]] int numWorkers() const noexcept { return num_workers_; }
+
+    // Worker 0 only: helpers stay available for submitted work.
+    void beginWork()
+    {
+        assert(worker_id_ == 0);
+        std::lock_guard lock(idle_mutex_);
+        active_ = true;
+        idle_cv_.notify_all();
+    }
+
+    // Worker 0 only: drain stragglers, then allow helpers to idle.
+    void endWork()
+    {
+        assert(worker_id_ == 0);
+        while (tryRunOne())
+            ;
+        std::lock_guard lock(idle_mutex_);
+        active_ = false;
+    }
 
     // Submit a task to the thread pool by pushing it directly
     // onto the bottom of the respective thread's local task queue.
@@ -79,7 +111,15 @@ class ThreadPool
 
     std::vector<std::thread> workers_;
     std::vector<WorkStealingQueue> worker_queues_;
+
     std::atomic<bool> shutdown_;
+
+    std::mutex idle_mutex_;
+    std::condition_variable idle_cv_;
+
+    // Protected by idle_mutex_. True while worker 0 is in an active work phase.
+    bool active_;
+
     const int num_workers_;
 
     // Attach the main thread to worker_id = 0.
@@ -98,9 +138,18 @@ class ThreadPool
     void runWorker(int id)
     {
         worker_id_ = id;
-        // Loop while there are tasks to run and not shutting down.
-        while (tryRunOne() || !shutdown_.load(std::memory_order_relaxed))
-            ;
+        for (;;)
+        {
+            if (tryRunOne())
+                continue;
+            if (shutdown_.load(std::memory_order_relaxed))
+                break;
+
+            std::unique_lock lock(idle_mutex_);
+            idle_cv_.wait(lock, [this] {
+                return shutdown_.load(std::memory_order_relaxed) || active_;
+            });
+        }
     }
 
     // Drain the remaining tasks in the queue and join the workers.
@@ -110,7 +159,12 @@ class ThreadPool
         assert(worker_id_ == 0);
         while (tryRunOne())
             ;
-        shutdown_.store(true, std::memory_order_relaxed);
+        {
+            std::lock_guard lock(idle_mutex_);
+            shutdown_.store(true, std::memory_order_relaxed);
+            active_ = false;
+            idle_cv_.notify_all();
+        }
         for (auto& worker : workers_)
         {
             if (worker.joinable())

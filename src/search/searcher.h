@@ -30,6 +30,8 @@ class Searcher
                                TranspositionTable* tt, ThreadPool* threadPool = nullptr,
                                const std::atomic<bool>* stopFlag = nullptr)
     {
+        ActiveWorkGuard activeWork{threadPool};
+
         // initialize search contexts for each threadpool worker
         const int n = threadPool != nullptr ? threadPool->numWorkers() : 1;
         std::vector<Context> contexts;
@@ -85,6 +87,28 @@ class Searcher
     }
 
   private:
+    class ActiveWorkGuard
+    {
+      public:
+        explicit ActiveWorkGuard(ThreadPool* pool) : pool_{pool}
+        {
+            if (pool_ != nullptr)
+                pool_->beginWork();
+        }
+
+        ~ActiveWorkGuard()
+        {
+            if (pool_ != nullptr)
+                pool_->endWork();
+        }
+
+        ActiveWorkGuard(const ActiveWorkGuard&) = delete;
+        ActiveWorkGuard& operator=(const ActiveWorkGuard&) = delete;
+
+      private:
+        ThreadPool* const pool_;
+    };
+
     enum class Phase
     {
         ROOT,
