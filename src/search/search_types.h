@@ -58,19 +58,19 @@ struct SearchConfig
         return config;
     }
 
-    [[nodiscard]] SearchConfig& withoutTT()
+    SearchConfig& withoutTT()
     {
         options.useTT = false;
         return *this;
     }
 
-    [[nodiscard]] SearchConfig& withoutQuiescence()
+    SearchConfig& withoutQuiescence()
     {
         options.useQuiescence = false;
         return *this;
     }
 
-    [[nodiscard]] SearchConfig& setParallelism(int workers)
+    SearchConfig& setParallelism(int workers)
     {
         limits.parallelism = clampSearchParallelism(workers);
         return *this;
