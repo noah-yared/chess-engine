@@ -24,9 +24,17 @@ enum class StrengthLevel
 class EngineController
 {
   public:
-    EngineController() noexcept : position_{} {};
-    explicit EngineController(const Position& position) : position_{position} {};
-    explicit EngineController(const std::string& fen) : position_{fen} {};
+    EngineController() noexcept : position_{}, hashEntries_{defaultHashEntries()} {}
+
+    explicit EngineController(const Position& position) noexcept
+        : position_{position}, hashEntries_{defaultHashEntries()}
+    {
+    }
+
+    explicit EngineController(const std::string& fen) noexcept
+        : position_{fen}, hashEntries_{defaultHashEntries()}
+    {
+    }
 
     // Precondition for search/playEngineMove: position_ has at least one legal move.
     SearchResult search(const SearchConfig& config, const std::atomic<bool>* stopFlag = nullptr)
@@ -58,6 +66,14 @@ class EngineController
     void setPosition(const std::string& fen) noexcept { position_ = Position(fen); }
     void setPosition(const Position& position) noexcept { position_ = position; }
 
+    void setHashSizeMB(int hashMB) noexcept { hashEntries_ = hashEntriesFromMB(hashMB); }
+
+    void clearTranspositionTable() noexcept
+    {
+        if (tt_)
+            tt_->clear();
+    }
+
     [[nodiscard]] const Position& position() const noexcept { return position_; }
     [[nodiscard]] Color turn() const noexcept { return position_.sideToMove(); }
 
@@ -65,6 +81,20 @@ class EngineController
     Position position_;
     std::unique_ptr<TranspositionTable> tt_;
     std::unique_ptr<ThreadPool> threadPool_;
+    size_t hashEntries_;
+    size_t ttSize_{0};
+
+    [[nodiscard]] static size_t defaultHashEntries() noexcept
+    {
+        return (1UL << 20) + 7;
+    }
+
+    [[nodiscard]] static size_t hashEntriesFromMB(int hashMB) noexcept
+    {
+        constexpr size_t kEntryBytes = 12;
+        const size_t bytes = static_cast<size_t>(std::max(hashMB, 1)) * 1024UL * 1024UL;
+        return std::max(bytes / kEntryBytes, size_t{1024});
+    }
 
     // The default table is ~12.6 MB and its occupied-bit pattern has to be
     // written on construction, so controllers that never search with a table
@@ -73,10 +103,19 @@ class EngineController
     // them only costs move-ordering quality on the next search.
     TranspositionTable* ttFor(const SearchConfig& config)
     {
-        if (config.options.useTT && !tt_)
-            tt_ = std::make_unique<TranspositionTable>();
-        else if (!config.options.useTT && tt_)
+        if (config.options.useTT)
+        {
+            if (!tt_ || ttSize_ != hashEntries_)
+            {
+                tt_ = std::make_unique<TranspositionTable>(hashEntries_);
+                ttSize_ = hashEntries_;
+            }
+        }
+        else if (tt_)
+        {
             tt_.reset();
+            ttSize_ = 0;
+        }
         return tt_.get();
     }
 

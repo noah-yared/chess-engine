@@ -122,6 +122,16 @@ TEST_F(SearchTest, EngineControllerAppliesPlayedMove)
     EXPECT_EQ(controller.position(), expected);
 }
 
+TEST_F(SearchTest, EngineControllerResizesAndClearsTranspositionTable)
+{
+    EngineController controller{std::string(STARTING_FEN)};
+    controller.setHashSizeMB(32);
+    controller.search(SearchConfig::fixedDepth(1));
+    controller.clearTranspositionTable();
+    const auto result = controller.search(SearchConfig::fixedDepth(1));
+    EXPECT_TRUE(isLegalMove(result.bestMove));
+}
+
 // The table is probed only to seed move ordering, never to cut off a node on a
 // stored score, so it may change how long a fixed-depth search takes but never
 // what that search returns.
