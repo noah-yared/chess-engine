@@ -225,7 +225,7 @@ bool UciEngine::execute(const std::string& line)
     if (trimmed == "ucinewgame")
     {
         position_ = Position::fromStartingPosition();
-        searchThread_.tryRun([](EngineController& engine, const std::atomic<bool>*) {
+        searchThread_.runCancellingIfBusy([](EngineController& engine, const std::atomic<bool>*) {
             engine.clearTranspositionTable();
         });
         return true;
@@ -369,9 +369,9 @@ void UciEngine::handleGo(const std::string& line)
     const Color sideToMove = position_.sideToMove();
     const SearchConfig config = buildSearchConfig(limits, sideToMove, threads_, moveOverheadMS_);
 
-    const bool accepted = searchThread_.tryRun(
+    searchThread_.runCancellingIfBusy(
         [this, searchPosition, config, sideToMove](EngineController& engine,
-                                                   const std::atomic<bool>* stopFlag)
+                                                 const std::atomic<bool>* stopFlag)
         {
             engine.setPosition(searchPosition);
             engine.setHashSizeMB(hashMB_);
@@ -397,8 +397,6 @@ void UciEngine::handleGo(const std::string& line)
             const SearchResult result = engine.search(config, stopFlag, onDepth);
             writeLine("bestmove " + result.bestMove.uci());
         });
-
-    (void)accepted;
 }
 
 void UciEngine::handleStop() { searchThread_.cancel(); }
@@ -409,8 +407,9 @@ void UciEngine::handlePerft(int depth)
         return;
 
     const Position searchPosition = position_;
-    searchThread_.tryRun([this, searchPosition, depth](EngineController&, const std::atomic<bool>*)
-                         {
+    searchThread_.runCancellingIfBusy([this, searchPosition, depth](EngineController&,
+                                                                    const std::atomic<bool>*)
+                                      {
                              Position pos = searchPosition;
                              const auto start = std::chrono::high_resolution_clock::now();
                              const u64 nodes = pos.isWhiteToMove()

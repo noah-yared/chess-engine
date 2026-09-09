@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <functional>
 #include <mutex>
@@ -35,17 +36,19 @@ class SearchThread
     SearchThread(const SearchThread&) = delete;
     SearchThread& operator=(const SearchThread&) = delete;
 
-    bool tryRun(Task&& task)
-    {
-        std::lock_guard lock(mu_);
-        if (busy_.load(std::memory_order_acquire))
-            return false;
+    bool tryRun(Task&& task) { return tryEmplaceTask(task); }
 
-        task_ = std::move(task);
-        cancelled_.store(false, std::memory_order_relaxed);
-        busy_.store(true, std::memory_order_release);
-        task_cv_.notify_one();
-        return true;
+    // If the worker is busy, cancel the in-flight task and schedule this one instead.
+    void runCancellingIfBusy(Task&& task)
+    {
+        if (tryEmplaceTask(task))
+            return;
+
+        cancel();
+        waitIdle();
+
+        const bool scheduled = tryEmplaceTask(task);
+        assert(scheduled && "task must schedule after cancel and waitIdle");
     }
 
     void cancel() { cancelled_.store(true, std::memory_order_relaxed); }
@@ -75,6 +78,21 @@ class SearchThread
     }
 
     void join() { thread_.join(); }
+
+    // Takes Task& so a failed attempt leaves task intact for a later retry (avoid
+    // std::move(task) twice on the same object).
+    bool tryEmplaceTask(Task& task)
+    {
+        std::lock_guard lock(mu_);
+        if (busy_.load(std::memory_order_acquire))
+            return false;
+
+        task_ = std::move(task);
+        cancelled_.store(false, std::memory_order_relaxed);
+        busy_.store(true, std::memory_order_release);
+        task_cv_.notify_one();
+        return true;
+    }
 
     void searchThreadLoop()
     {

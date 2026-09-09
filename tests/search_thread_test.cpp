@@ -69,6 +69,34 @@ TEST(SearchThreadTest, WaitIdleDrainsPostedTask)
     EXPECT_TRUE(taskFinished.load());
 }
 
+TEST(SearchThreadTest, RunCancellingIfBusyReplacesInFlightTask)
+{
+    SearchThread searchThread;
+    std::atomic<bool> gate{false};
+    std::atomic<bool> firstTaskStarted{false};
+    std::atomic<bool> secondTaskRan{false};
+
+    searchThread.runCancellingIfBusy(
+        [&](EngineController&, const std::atomic<bool>* stopFlag)
+        {
+            firstTaskStarted.store(true);
+            while (!gate.load(std::memory_order_relaxed) &&
+                   !(stopFlag != nullptr && stopFlag->load(std::memory_order_relaxed)))
+                std::this_thread::sleep_for(1ms);
+        });
+
+    ASSERT_TRUE(waitUntil([&] { return firstTaskStarted.load(); }));
+
+    searchThread.runCancellingIfBusy(
+        [&](EngineController&, const std::atomic<bool>*)
+        {
+            secondTaskRan.store(true);
+        });
+
+    ASSERT_TRUE(waitUntil([&] { return secondTaskRan.load(); }));
+    searchThread.waitIdle();
+}
+
 TEST(SearchThreadTest, CancelAbortsLongRunningSearch)
 {
     SearchThread searchThread;
