@@ -62,6 +62,8 @@ fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 ./engine --simulate -n 20 -d 5
 ```
 
+UCI is available with `cmake -B build -DENGINE_UCI_INTERFACE=ON`.
+
 ## Tests
 
 ```bash
