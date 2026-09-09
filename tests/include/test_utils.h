@@ -52,3 +52,11 @@ class ChessTestFixture : public ::testing::Test
         return MoveFactory::createMove<MoveType::Castle>(pos, from, to);
     }
 };
+
+[[nodiscard]] inline bool isLegalMove(const Position& position, Move move)
+{
+    MoveList moves{};
+    position.isWhiteToMove() ? MoveGenerator::pushLegalMoves<Color::WHITE>(position, moves)
+                             : MoveGenerator::pushLegalMoves<Color::BLACK>(position, moves);
+    return moves.contains(move);
+}

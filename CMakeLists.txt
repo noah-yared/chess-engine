@@ -71,6 +71,7 @@ add_executable(engine_tests # declare test binary
   tests/move_generation_test.cpp
   tests/perft_test.cpp
   tests/search_test.cpp
+  tests/search_thread_test.cpp
   tests/thread_pool_test.cpp
   tests/transposition_table_test.cpp
 )

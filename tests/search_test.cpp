@@ -15,7 +15,10 @@
 class SearchTest : public ChessTestFixture
 {
   protected:
-    [[nodiscard]] bool isLegalMove(const Move move) const { return legalMoves().contains(move); }
+    [[nodiscard]] bool isLegalMove(const Move move) const
+    {
+        return ::isLegalMove(pos, move);
+    }
 };
 
 TEST_F(SearchTest, SearcherReturnsLegalMoveForStartingPosition)
