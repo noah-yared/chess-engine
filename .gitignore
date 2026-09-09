@@ -14,3 +14,4 @@ tests/hello_test.cpp
 Testing/
 output/
 *.json
+build-uci/

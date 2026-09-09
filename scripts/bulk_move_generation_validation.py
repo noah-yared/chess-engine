@@ -109,32 +109,32 @@ def build_engine():
         print(f"Build stderr: {e.stderr}")
 
 
+def init_worker():
+    global _engine_process
+    _engine_process = subprocess.Popen(
+        [str(ENGINE_EXECUTABLE)],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+    )
+
+
 def get_engine_output(fen: str) -> str:
     try:
-        result = subprocess.run(
-            [ENGINE_EXECUTABLE, "--legal-moves", fen],
-            capture_output=True,
-            text=True,
-            timeout=10,  # Add timeout to prevent hanging
-        )
-        if result.returncode != 0:
-            print(f"Warning: Engine returned non-zero exit code for FEN: {fen}")
-            return ""
-        return result.stdout.strip()
-    except subprocess.TimeoutExpired:
-        print(f"Warning: Engine timed out for FEN: {fen}")
-        return ""
-    except FileNotFoundError:
-        print(f"Error: Engine executable not found at {ENGINE_EXECUTABLE}")
+        _engine_process.stdin.write(f"position fen {fen}\n")
+        _engine_process.stdin.write("legalmoves\n")
+        _engine_process.stdin.flush()
+        return _engine_process.stdout.readline().strip()
+    except (BrokenPipeError, OSError):
+        print(f"Error: Engine process failed for FEN: {fen}")
         sys.exit(1)
 
 
 def parse_engine_output(engine_output: str) -> set[str]:
-    return set(
-        move.strip()
-        for move in engine_output.strip("MoveList()").split(",")
-        if move.strip()
-    )
+    if not engine_output:
+        return set()
+    return set(engine_output.split())
 
 
 def actual_generated_moves(fen: str) -> set[str]:
@@ -180,7 +180,7 @@ def validate_move_generation(fen_test_batch_size: int | None = None):
             if fen_test_batch_size is None
             else fens(lock, fen_test_batch_size)
         )
-        with Pool() as pool:
+        with Pool(initializer=init_worker) as pool:
             for _ in tqdm(
                 pool.imap_unordered(compare_generated_moves, fen_generator),
                 total=fen_test_batch_size,

@@ -52,17 +52,20 @@ cmake --build build -j
 
 ## Usage
 
-From `build/`:
+The engine speaks UCI on stdin. From `build/`:
 
 ```bash
-fen="rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
-./engine --perft -d 6
-./engine --find-best "$fen" -d 6
-./engine --legal-moves "$fen"
-./engine --simulate -n 20 -d 5
+# Interactive UCI session
+./engine
+
+# One-shot commands (argv is treated as a single UCI line)
+./engine go perft 6
+
+# Example interactive session
+printf 'uci\nisready\nposition startpos\ngo depth 6\nquit\n' | ./engine
 ```
 
-UCI is available with `cmake -B build -DENGINE_UCI_INTERFACE=ON`.
+Debug commands (non-UCI): `fen`, `legalmoves`, `board`, `eval`, `hash`.
 
 ## Tests
 
@@ -80,5 +83,5 @@ src/move/           generation, make/unmake
 src/search/         alpha-beta, TT, Young Brothers Wait
 src/concurrency/    Chase-Lev pool
 src/eval/           material + piece-square tables
-src/app/            CLI
+src/app/            UCI loop, SearchThread
 ```

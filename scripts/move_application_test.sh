@@ -37,8 +37,9 @@ if [ ! -d $tmp_path ]; then
 fi
 
 # run the engine with the move application data
-$scripts_path/../build/engine --make-move \
+awk -F, 'NF == 3 { printf "position fen %s moves %s\nfen\n", $1, $2 } END { print "quit" }' \
     < $scripts_path/output/move_app_data.txt \
+    | $scripts_path/../build/engine \
     > $tmp_path/actual_after_fens.txt
 
 # write the after fens to a file in tmp

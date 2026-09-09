@@ -1,4 +1,3 @@
-#ifdef ENGINE_UCI_INTERFACE
 #include "app/search_thread.h"
 #include "app/uci.h"
 
@@ -45,8 +44,3 @@ int main(int argc, const char* argv[])
     searchThread.waitIdle();
     return 0;
 }
-#else
-#include "app/cli.h"
-
-int main(int argc, const char* argv[]) { return cli::runCli(argc, argv); }
-#endif

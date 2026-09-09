@@ -79,7 +79,7 @@ Generates FEN positions by traversing a chess game tree to a specified depth. Us
 ## Engine Testing
 
 ### `bulk_move_generation_validation.py`
-Compares engine-generated moves against `python-chess` over many FENs to validate correctness using FENs parsed by `parse_pgn_db.py`.
+Compares engine-generated moves against `python-chess` over many FENs. Spawns one persistent UCI engine process per worker and queries each position with `position fen ...` followed by `legalmoves`.
 
 ### `generate_legal_moves.py`
 Takes a FEN and prints all legal moves nicely formatted using the `python-chess` library, used for writing legal move generation tests for the engine.
@@ -88,7 +88,7 @@ Takes a FEN and prints all legal moves nicely formatted using the `python-chess`
 Generates test data for validating the engine's move application functionality. Creates CSV-formatted data with before-FEN, move, and after-FEN.
 
 ### `move_application_test.sh`
-Tests the engine's move application by comparing expected vs actual board states after moves. Automatically builds the engine if needed and provides error reporting.
+Tests move application by piping `position fen ... moves ...` / `fen` commands through a single UCI engine process and comparing the resulting FENs against expected values.
 
 ---
 

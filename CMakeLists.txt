@@ -31,11 +31,8 @@ target_include_directories(engine_lib
     ${CMAKE_SOURCE_DIR}/src
 )
 
-option(ENGINE_UCI_INTERFACE "Use UCI stdin loop in main instead of CLI" OFF)
-
 # engine binary
 add_executable(engine
-  src/app/cli.cpp
   src/app/main.cpp
   src/app/uci.cpp
 )
@@ -47,9 +44,6 @@ target_link_libraries(engine
   PRIVATE
     engine_lib
 )
-if(ENGINE_UCI_INTERFACE)
-  target_compile_definitions(engine PRIVATE ENGINE_UCI_INTERFACE=1)
-endif()
 
 # disable googl test/benchmark installation
 set(INSTALL_GTEST OFF CACHE BOOL "Disable GoogleTest installation" FORCE)
