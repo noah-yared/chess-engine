@@ -37,9 +37,11 @@ class EngineController
     }
 
     // Precondition for search/playEngineMove: position_ has at least one legal move.
-    SearchResult search(const SearchConfig& config, const std::atomic<bool>* stopFlag = nullptr)
+    SearchResult search(const SearchConfig& config, const std::atomic<bool>* stopFlag = nullptr,
+                        Searcher::DepthInfoCallback onDepthCompleted = nullptr)
     {
-        return Searcher::search(position_, config, ttFor(config), threadPoolFor(config), stopFlag);
+        return Searcher::search(position_, config, ttFor(config), threadPoolFor(config), stopFlag,
+                                std::move(onDepthCompleted));
     }
 
     // Useful for quick tests.

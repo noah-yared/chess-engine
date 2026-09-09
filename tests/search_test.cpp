@@ -132,6 +132,25 @@ TEST_F(SearchTest, EngineControllerResizesAndClearsTranspositionTable)
     EXPECT_TRUE(isLegalMove(result.bestMove));
 }
 
+TEST_F(SearchTest, DepthInfoCallbackReportsEachCompletedDepth)
+{
+    loadStartingPosition();
+    TranspositionTable tt(257);
+    auto config = SearchConfig::fixedDepth(3);
+    int callbackCount = 0;
+
+    Searcher::search(pos, config, &tt, nullptr, nullptr,
+                     [&callbackCount](const Position&, const Searcher::DepthInfo& info)
+                     {
+                         ++callbackCount;
+                         EXPECT_GE(info.depth, 1);
+                         EXPECT_LE(info.depth, 3);
+                         EXPECT_FALSE(info.pv.empty());
+                     });
+
+    EXPECT_EQ(callbackCount, 3);
+}
+
 // The table is probed only to seed move ordering, never to cut off a node on a
 // stored score, so it may change how long a fixed-depth search takes but never
 // what that search returns.

@@ -35,6 +35,30 @@ std::vector<std::string> split(const std::string& str, char delimiter = ' ')
 namespace cli
 {
 
+void printDepthInfoToConsole(const Position& root, const Searcher::DepthInfo& info)
+{
+    const auto elapsedNs = info.elapsed.count();
+    const auto timeMs = elapsedNs / 1'000'000;
+    const auto nps =
+        elapsedNs == 0
+            ? static_cast<long long>(info.nodesSearched * 1'000'000'000ULL)
+            : std::llround((info.nodesSearched * 1e9) /
+                           static_cast<double>(std::max(elapsedNs, 1LL)));
+
+    std::ostringstream pv;
+    for (std::size_t i = 0; i < info.pv.size(); ++i)
+    {
+        if (i > 0)
+            pv << ' ';
+        pv << info.pv[i].uci();
+    }
+
+    std::cout << "info depth " << info.depth << " score cp "
+              << (root.isWhiteToMove() ? info.score : -info.score) << " nodes "
+              << info.nodesSearched << " time " << timeMs << " nps " << nps << " pv " << pv.str()
+              << '\n';
+}
+
 void printEngineInfo()
 {
     std::cout << '\n'
@@ -196,7 +220,8 @@ void simulateSelfPlay(const SelfPlayArgs& args, const char* exePath)
     auto start = std::chrono::high_resolution_clock::now();
     for (int moveNumber = 1; moveNumber <= numMoves; ++moveNumber)
     {
-        auto result = engine.search(searchDepth);
+        auto result =
+            engine.search(SearchConfig::fixedDepth(searchDepth), nullptr, printDepthInfoToConsole);
         auto move = result.bestMove;
         nodesSearched += result.stats.nodesSearched;
         engine.advance(move);
@@ -229,7 +254,7 @@ void printLegalMoves(const std::string& fen) { printLegalMoves(Position(fen)); }
 void printBestMove(const std::string& fen, int depth)
 {
     EngineController engine(fen);
-    auto result = engine.search(depth);
+    auto result = engine.search(SearchConfig::fixedDepth(depth), nullptr, printDepthInfoToConsole);
     std::cout << result.bestMove.uci() << '\n';
 }
 

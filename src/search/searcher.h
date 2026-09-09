@@ -5,7 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdlib>
-#include <iostream>
+#include <functional>
 #include <optional>
 #include <vector>
 
@@ -23,12 +23,24 @@
 class Searcher
 {
   public:
+    struct DepthInfo
+    {
+        int depth = 0;
+        int score = 0;
+        u64 nodesSearched = 0ULL;
+        std::chrono::nanoseconds elapsed{0};
+        std::vector<Move> pv;
+    };
+
+    using DepthInfoCallback = std::function<void(const Position& root, const DepthInfo& info)>;
+
     // Preconditions:
     // - root has at least one legal move.
     // - config.limits.maxDepth >= 1.
     static SearchResult search(const Position& root, const SearchConfig& config,
                                TranspositionTable* tt, ThreadPool* threadPool = nullptr,
-                               const std::atomic<bool>* stopFlag = nullptr)
+                               const std::atomic<bool>* stopFlag = nullptr,
+                               DepthInfoCallback onDepthCompleted = nullptr)
     {
         ActiveWorkGuard activeWork{threadPool};
 
@@ -43,16 +55,6 @@ class Searcher
         // ensure valid max depth
         assert(config.limits.maxDepth >= 1 && "maxDepth must be >= 1!");
 
-        auto join_pv_moves = [](const std::vector<Move>& pv) -> std::string {
-            std::string pv_str = "";
-            for (int i = 0; i < pv.size() - 1; ++i) {
-                pv_str.append(pv[i].uci());
-                pv_str.append(" ");
-            }
-            pv_str.append(pv.back().uci());
-            return pv_str;
-        };
-
         // apply iterative deepening
         std::optional<SearchResult> lastCompleted;
 
@@ -63,25 +65,39 @@ class Searcher
                                                   : searchRoot<Color::BLACK>(root, contexts, depth, threadPool);
             auto end = std::chrono::high_resolution_clock::now();
             auto duration_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
-            auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(duration_ns);
 
             if (newResult.aborted)
                 break; // ran out of search time
 
-            std::cout << "info depth " << depth
-                      << " score cp " << (root.isWhiteToMove() ? newResult.score : -newResult.score)
-                      << " nodes " << newResult.stats.nodesSearched
-                      << " time " << duration_ms.count()
-                      << " nps " << std::llround((newResult.stats.nodesSearched * 1e9) / (std::max<decltype(duration_ns)::rep>(duration_ns.count(), 1)))
-                      << " pv " << join_pv_moves(newResult.pv) << "\n";
+            if (onDepthCompleted)
+            {
+                onDepthCompleted(root,
+                                 DepthInfo{.depth = depth,
+                                           .score = newResult.score,
+                                           .nodesSearched = newResult.stats.nodesSearched,
+                                           .elapsed = duration_ns,
+                                           .pv = newResult.pv});
+            }
 
             lastCompleted = newResult;
         }
 
         if (!lastCompleted.has_value())
         {
-            assert(false && "Search failed before completing depth 1!");
-            std::abort();
+            MoveList moves{};
+            if (root.isWhiteToMove())
+                MoveGenerator::pushLegalMoves<Color::WHITE>(root, moves);
+            else
+                MoveGenerator::pushLegalMoves<Color::BLACK>(root, moves);
+            assert(moves.size() > 0 && "Search failed with no legal moves at root!");
+
+            Position afterMove = root;
+            afterMove.applyMove(moves[0]);
+            return SearchResult{.bestMove = moves[0],
+                                .score = afterMove.evaluation(),
+                                .aborted = true,
+                                .stats = accumulateStats(contexts),
+                                .pv = {moves[0]}};
         }
         return *lastCompleted;
     }
