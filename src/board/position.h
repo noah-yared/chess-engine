@@ -145,9 +145,6 @@ class Position
             return Evaluator::evaluate(bitboards_);
         }
     }
-    // for benchmarking/debugging
-    [[nodiscard]] int evaluation_v1() const noexcept { return Evaluator::evaluate_v1(bitboards_); }
-    [[nodiscard]] int evaluation_v2() const noexcept { return Evaluator::evaluate_v2(bitboards_); }
 
     /////////////////////////
     // State Interface     //

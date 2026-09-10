@@ -63,19 +63,8 @@ inline constexpr std::array<std::array<int, 64>, 6> PIECE_SQUARES = {{
 // mirror square for black
 inline int mirrorSquare(int square) noexcept { return 56 + (square & 7) - (square & 56); }
 
-// Get the value of a piece for a given piece type
-inline int getMaterialValue(PieceType piece) noexcept
-{
-    return PIECE_VALUES[static_cast<int>(piece)];
-}
 inline int getMaterialValue(int pieceKey) noexcept { return PIECE_VALUES[pieceKey]; }
 
-// Get the value of a square for a given piece type, side, and square
-inline int getPositionalValue(PieceType pType, int square, Color color) noexcept
-{
-    int lookupSquare = (color == Color::WHITE) ? mirrorSquare(square) : square;
-    return PIECE_SQUARES[static_cast<int>(pType)][lookupSquare];
-}
 template <Color color>
 inline int getPositionalValue(int pieceKey, int square) noexcept
 {
@@ -90,70 +79,27 @@ inline int getPositionalValue(int pieceKey, int square) noexcept
 }
 } // unnamed namespace
 
-int Evaluator::evaluate_v1(const Bitboards& bitboards) noexcept
-{
-    int eval = evaluateSide_v1(bitboards, Color::WHITE) - evaluateSide_v1(bitboards, Color::BLACK);
-    return std::clamp(eval, MIN_EVAL, MAX_EVAL);
-}
-
-int Evaluator::evaluate_v2(const Bitboards& bitboards) noexcept
-{
-    int eval = evaluateSide_v2(bitboards, Color::WHITE) - evaluateSide_v2(bitboards, Color::BLACK);
-    return std::clamp(eval, MIN_EVAL, MAX_EVAL);
-}
-
 int Evaluator::evaluate(const Bitboards& bitboards) noexcept
 {
     int eval = evaluateSide<Color::WHITE>(bitboards) - evaluateSide<Color::BLACK>(bitboards);
     return std::clamp(eval, MIN_EVAL, MAX_EVAL);
 }
 
-int Evaluator::evaluateSide_v1(const Bitboards& bitboards, Color color) noexcept
-{
-    int score = 0;
-    u64 bitmask = 1ULL, bb = bitboards.allyBB(color);
-    for (int square = 0; square < 64; ++square, bitmask <<= 1)
-        if (bb & bitmask)
-        {
-            PieceType pType = bitboards.getPieceType(square, color);
-            score += getMaterialValue(pType) + getPositionalValue(pType, square, color);
-        }
-    return score;
-}
-
-int Evaluator::evaluateSide_v2(const Bitboards& bitboards, Color color) noexcept
-{
-    return BitUtils::accumulateBits(
-        bitboards.allyBB(color),
-        [&, color](int score, int square) noexcept
-        {
-            PieceType pType = bitboards.getPieceType(square, color);
-            return score + getMaterialValue(pType) + getPositionalValue(pType, square, color);
-        },
-        0);
-}
-
 template <Color color>
 int Evaluator::evaluateSide(const Bitboards& bitboards) noexcept
 {
-    struct AccType
-    {
-        int pKey = 0, score = 0;
-    };
-    auto start = color == Color::WHITE ? bitboards.wStart() : bitboards.bStart(),
-         end = color == Color::WHITE ? bitboards.wEnd() : bitboards.bEnd();
-    return std::accumulate(start, end, AccType{},
-                           [&bitboards](AccType acc, u64 bb) noexcept -> AccType
+    auto start = color == Color::WHITE ? bitboards.wStart() : bitboards.bStart();
+    auto end = color == Color::WHITE ? bitboards.wEnd() : bitboards.bEnd();
+    return std::accumulate(start, end, 0,
+                           [i = 0](int score, u64 bb) mutable noexcept
                            {
-                               return {acc.pKey + 1,
-                                       BitUtils::accumulateBits<int>(
-                                           bb,
-                                           [pKey = acc.pKey](int score, int square) noexcept
-                                           {
-                                               return score + getMaterialValue(pKey) +
-                                                      getPositionalValue<color>(pKey, square);
-                                           },
-                                           acc.score)};
-                           })
-        .score;
+                               return BitUtils::accumulateBits<int>(
+                                   bb,
+                                   [pKey = i++](int score, int square) noexcept
+                                   {
+                                       return score + getMaterialValue(pKey) +
+                                              getPositionalValue<color>(pKey, square);
+                                   },
+                                   score);
+                           });
 }
