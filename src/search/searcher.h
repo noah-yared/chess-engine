@@ -305,7 +305,6 @@ class Searcher
     static NodeResult executeSplitMove(SplitPoint& splitPoint, std::vector<Context>& contexts,
                                  int moveIndex, ThreadPool* threadPool)
     {
-        SplitPendingGuard guard(splitPoint.pending);
         if (splitShouldStop(splitPoint))
             return NodeResult{.aborted = true};
 
@@ -372,7 +371,10 @@ class Searcher
             splitPoint.pending.fetch_add(1);
             threadPool->submit(
                 [&splitPoint, &contexts, &results, moveIndex, threadPool]
-                { results[moveIndex] = executeSplitMove<color>(splitPoint, contexts, moveIndex, threadPool); });
+                {
+                    SplitPendingGuard guard(splitPoint.pending);
+                    results[moveIndex] = executeSplitMove<color>(splitPoint, contexts, moveIndex, threadPool);
+                });
         }
 
         while (splitPoint.pending.load() > 0)
